@@ -15,36 +15,44 @@ use yii\di\Container;
 
 /**
  * Gets the application start timestamp.
+ * 定义项目开始的时间
  */
 defined('YII_BEGIN_TIME') or define('YII_BEGIN_TIME', microtime(true));
 /**
  * This constant defines the framework installation directory.
+ * 定义 Yii2 项目的文件地址
  */
 defined('YII2_PATH') or define('YII2_PATH', __DIR__);
 /**
  * This constant defines whether the application should be in debug mode or not. Defaults to false.
+ * 定义是否开启 Yii 的 Debug
  */
 defined('YII_DEBUG') or define('YII_DEBUG', false);
 /**
  * This constant defines in which environment the application is running. Defaults to 'prod', meaning production environment.
  * You may define this constant in the bootstrap script. The value could be 'prod' (production), 'dev' (development), 'test', 'staging', etc.
+ * 定义 Yii 的环境， 其值可以是 'prod' (production), 'dev' (development), 'test', 'staging' 等等
  */
 defined('YII_ENV') or define('YII_ENV', 'prod');
 /**
  * Whether the the application is running in production environment
+ * 项目是否运行在 production 环境上
  */
 defined('YII_ENV_PROD') or define('YII_ENV_PROD', YII_ENV === 'prod');
 /**
  * Whether the the application is running in development environment
+ * 项目是否运行在 development 环境上
  */
 defined('YII_ENV_DEV') or define('YII_ENV_DEV', YII_ENV === 'dev');
 /**
  * Whether the the application is running in testing environment
+ * 项目是否运行在 testing 环境上
  */
 defined('YII_ENV_TEST') or define('YII_ENV_TEST', YII_ENV === 'test');
 
 /**
  * This constant defines whether error handling should be enabled. Defaults to true.
+ * 定义是否开启 error handler
  */
 defined('YII_ENABLE_ERROR_HANDLER') or define('YII_ENABLE_ERROR_HANDLER', true);
 
@@ -69,12 +77,14 @@ class BaseYii
     public static $classMap = [];
     /**
      * @var \yii\console\Application|\yii\web\Application the application instance
+     * Yii 的 application 的实例， Yii 的 components 的使用都是通过这个实例使用的
      */
     public static $app;
     /**
      * @var array registered path aliases
      * @see getAlias()
      * @see setAlias()
+     * Yii 的路径别名的 Map, 默认 @yii 指向当前目录
      */
     public static $aliases = ['@yii' => __DIR__];
     /**
@@ -128,11 +138,17 @@ class BaseYii
      */
     public static function getAlias($alias, $throwException = true)
     {
+        /**
+         * strncmp — 二进制安全比较字符串开头的若干个字符
+         * int strncmp ( string $str1 , string $str2 , int $len )
+         * 如果 $alias 不是以 '@' 开头的，就不是一个 Yii 的别名
+         */
         if (strncmp($alias, '@', 1)) {
             // not an alias
             return $alias;
         }
 
+        // 如果 $alias 中含有 /, 就截取 / 之前的字符作为 $root
         $pos = strpos($alias, '/');
         $root = $pos === false ? $alias : substr($alias, 0, $pos);
 
@@ -271,12 +287,16 @@ class BaseYii
      */
     public static function autoload($className)
     {
+        // 自动加载类
         if (isset(static::$classMap[$className])) {
+            // 如果 $classMap 中存在该类，就直接使用
             $classFile = static::$classMap[$className];
+            // 如果对应的文件地址是别名，就转化成真实的文件地址
             if ($classFile[0] === '@') {
                 $classFile = static::getAlias($classFile);
             }
         } elseif (strpos($className, '\\') !== false) {
+            // 如果含有 namespace,就拼成别名，再获取真实的文件地址
             $classFile = static::getAlias('@' . str_replace('\\', '/', $className) . '.php', false);
             if ($classFile === false || !is_file($classFile)) {
                 return;
@@ -285,6 +305,7 @@ class BaseYii
             return;
         }
 
+        // 引入该类的文件
         include($classFile);
 
         if (YII_DEBUG && !class_exists($className, false) && !interface_exists($className, false) && !trait_exists($className, false)) {
