@@ -47,6 +47,8 @@ class UrlManager extends Component
      * string part of a URL, pretty URLs allow using path info to represent some of the parameters
      * and can thus produce more user-friendly URLs, such as "/news/Yii-is-released", instead of
      * "/index.php?r=news/view&id=100".
+     *
+     * 是否开启 pretty URLs
      */
     public $enablePrettyUrl = false;
     /**
@@ -94,21 +96,31 @@ class UrlManager extends Component
      *
      * Note that if you modify this property after the UrlManager object is created, make sure
      * you populate the array with rule objects instead of rule configurations.
+     *
+     * 配置的 rules 存储在这个数组里
      */
     public $rules = [];
     /**
      * @var string the URL suffix used when in 'path' format.
      * For example, ".html" can be used so that the URL looks like pointing to a static HTML page.
      * This property is used only if [[enablePrettyUrl]] is true.
+     *
+     * 后缀名，只有在 $enablePrettyUrl 是 true 时，才起作用。
+     * 如果 pretty url 是 /news/Yii-is-released，$suffix 是 '.html'
+     * 则最后的 url 会是 /news/Yii-is-released.html
      */
     public $suffix;
     /**
      * @var boolean whether to show entry script name in the constructed URL. Defaults to true.
      * This property is used only if [[enablePrettyUrl]] is true.
+     *
+     * 是否展示 index.php
      */
     public $showScriptName = true;
     /**
      * @var string the GET parameter name for route. This property is used only if [[enablePrettyUrl]] is false.
+     *
+     * $enablePrettyUrl 是 false 时，默认的 router 的参数名
      */
     public $routeParam = 'r';
     /**
@@ -118,6 +130,9 @@ class UrlManager extends Component
      * After the UrlManager object is created, if you want to change this property,
      * you should only assign it with a cache object.
      * Set this property to false if you do not want to cache the URL rules.
+     *
+     * 用来缓存 route 规则的 component 的名称，默认为cache
+     * 不想使用缓存存储 route 规则的话，就将它设置为 false
      */
     public $cache = 'cache';
     /**
@@ -142,18 +157,25 @@ class UrlManager extends Component
             return;
         }
         if (is_string($this->cache)) {
+            // 如果 $cache 是字符串，就将它初始化为 cache component
             $this->cache = Yii::$app->get($this->cache, false);
         }
         if ($this->cache instanceof Cache) {
+            // 如果　$cache 继承了 Cache，就说明有 cache component
+            // 使用当前的类名称作为缓存的 key 值
             $cacheKey = __CLASS__;
+            // 根据 rules 的内容，使用MD5算出其hash的值，用于判断缓存是否失效
             $hash = md5(json_encode($this->rules));
             if (($data = $this->cache->get($cacheKey)) !== false && isset($data[1]) && $data[1] === $hash) {
+                // 能够获取到缓存，而且缓存没有失效，就将缓存中的rules保存到该对象的rules属性中
                 $this->rules = $data[0];
             } else {
+                // 缓存失效，或着未取到相应的缓存，就重新构建rules，并存到缓存中
                 $this->rules = $this->buildRules($this->rules);
                 $this->cache->set($cacheKey, [$this->rules, $hash]);
             }
         } else {
+            // 没有开启cache，就直接构建rules
             $this->rules = $this->buildRules($this->rules);
         }
     }
@@ -193,11 +215,15 @@ class UrlManager extends Component
     protected function buildRules($rules)
     {
         $compiledRules = [];
+        // 支持的请求方法
         $verbs = 'GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS';
         foreach ($rules as $key => $rule) {
             if (is_string($rule)) {
                 $rule = ['route' => $rule];
                 if (preg_match("/^((?:($verbs),)*($verbs))\\s+(.*)$/", $key, $matches)) {
+                    // 匹配rules中相应的请求方法
+                    // 正则表达式的分析如下
+                    // http://jex.im/regulex/#!embed=false&flags=&re=%5E((%3F%3A(GET%7CHEAD%7CPOST%7CPUT%7CPATCH%7CDELETE%7COPTIONS)%2C)*(GET%7CHEAD%7CPOST%7CPUT%7CPATCH%7CDELETE%7COPTIONS))%5Cs%2B(.*)%24
                     $rule['verb'] = explode(',', $matches[1]);
                     // rules that do not apply for GET requests should not be use to create urls
                     if (!in_array('GET', $rule['verb'])) {
@@ -206,6 +232,13 @@ class UrlManager extends Component
                     $key = $matches[4];
                 }
                 $rule['pattern'] = $key;
+                // 假设$rule初始为 PUT，POST <controller:\w+>/<id:\d+>
+                // 最终$rule的结构如下
+                // [
+                //   'route'=>'PUT，POST <controller:\w+>/<id:\d+>'
+                //   'verb'=>['PUT','POST'],
+                //   'pattern'=>’<controller:\w+>/<id:\d+>
+                // ]
             }
             if (is_array($rule)) {
                 $rule = Yii::createObject(array_merge($this->ruleConfig, $rule));
