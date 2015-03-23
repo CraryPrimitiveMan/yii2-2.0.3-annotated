@@ -24,6 +24,8 @@ use yii\base\InvalidConfigException;
  * ]
  * ~~~
  *
+ * rule中class的默认值是yii\web\UrlRule
+ *
  * @author Qiang Xue <qiang.xue@gmail.com>
  * @since 2.0
  */
@@ -102,6 +104,7 @@ class UrlRule extends Object implements UrlRuleInterface
     private $_paramRules = [];
     /**
      * @var array list of parameters used in the route.
+     * 路由的参数存储数组
      */
     private $_routeParams = [];
 
@@ -118,6 +121,7 @@ class UrlRule extends Object implements UrlRuleInterface
             throw new InvalidConfigException('UrlRule::route must be set.');
         }
         if ($this->verb !== null) {
+            // 将verb变成数组，并将器内容全部大写
             if (is_array($this->verb)) {
                 foreach ($this->verb as $i => $verb) {
                     $this->verb[$i] = strtoupper($verb);
@@ -134,15 +138,19 @@ class UrlRule extends Object implements UrlRuleInterface
         $this->route = trim($this->route, '/');
 
         if ($this->host !== null) {
+            // host存在
             $this->host = rtrim($this->host, '/');
             $this->pattern = rtrim($this->host . '/' . $this->pattern, '/');
         } elseif ($this->pattern === '') {
+            // pattern为空
             $this->_template = '';
             $this->pattern = '#^$#u';
 
             return;
         } elseif (($pos = strpos($this->pattern, '://')) !== false) {
+            // 存在'://'字符串
             if (($pos2 = strpos($this->pattern, '/', $pos + 3)) !== false) {
+                // 找到'://'之后的第一个'/'的位置，并截取之前的字符串作为host
                 $this->host = substr($this->pattern, 0, $pos2);
             } else {
                 $this->host = $this->pattern;
@@ -151,7 +159,17 @@ class UrlRule extends Object implements UrlRuleInterface
             $this->pattern = '/' . $this->pattern . '/';
         }
 
+        /**
+         * $rule的结构如下
+         * [
+         *     'route'=>'PUT，POST <controller:\w+>/<id>'
+         *     'verb'=>['PUT','POST'],
+         *     'pattern'=>'<controller:\w+>/<id>'
+         * ]
+         */
         if (strpos($this->route, '<') !== false && preg_match_all('/<(\w+)>/', $this->route, $matches)) {
+            // 匹配不带正则表达式的路由配置，并放入_routeParams中存起来
+            // 如上的例子中,$matches[1]=['id']
             foreach ($matches[1] as $name) {
                 $this->_routeParams[$name] = "<$name>";
             }
@@ -167,9 +185,33 @@ class UrlRule extends Object implements UrlRuleInterface
             ')' => '\\)',
         ];
         $tr2 = [];
+        /**
+         * 匹配带正则表达式的路由配置
+         * PREG_PATTERN_ORDER
+         *   结果排序为$matches[0]保存完整模式的所有匹配, $matches[1] 保存第一个子组的所有匹配，以此类推。
+         *
+         * PREG_SET_ORDER
+         *   结果排序为$matches[0]包含第一次匹配得到的所有匹配(包含子组)， $matches[1]是包含第二次匹配到的所有匹配(包含子组)的数组，以此类推。
+         *
+         * PREG_OFFSET_CAPTURE
+         *   如果这个标记被传递，每个发现的匹配返回时会增加它相对目标字符串的偏移量。
+         *   注意这会改变matches中的每一个匹配结果字符串元素，使其成为一个第0个元素为匹配结果字符串，第1个元素为 匹配结果字符串在subject中的偏移量。
+         *
+         * 如果没有给定排序标记，假定设置为PREG_PATTERN_ORDER。
+         *
+         * 如果$this->pattern是'<controller:\w+>/<id:\d+>'
+         * 则$matches为[
+         *     [['<controller:\w+>', 0], ['controller', 1], ['\w+', 12]],
+         *     [['<id:\d+>', 17], ['id', 18], ['\d+', 21]]
+         * ]
+         */
         if (preg_match_all('/<(\w+):?([^>]+)?>/', $this->pattern, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER)) {
             foreach ($matches as $match) {
+                // 以第一条记录为例
+                // $name = 'controller'
                 $name = $match[1][0];
+                // $pattern = '\w+'
+                // 如果正则表达式的匹配值为空，则默认为'[^\/]+'
                 $pattern = isset($match[2][0]) ? $match[2][0] : '[^\/]+';
                 if (array_key_exists($name, $this->defaults)) {
                     $length = strlen($match[0][0]);
@@ -180,6 +222,7 @@ class UrlRule extends Object implements UrlRuleInterface
                         $tr["<$name>"] = "(?P<$name>$pattern)?";
                     }
                 } else {
+                    // str['<controller>'] = '(?P<controller>\w+)'
                     $tr["<$name>"] = "(?P<$name>$pattern)";
                 }
                 if (isset($this->_routeParams[$name])) {
@@ -190,7 +233,10 @@ class UrlRule extends Object implements UrlRuleInterface
             }
         }
 
+        // 如果$this->pattern是'<controller:\w+>/<id:\d+>'
+        // 则$this->_template是'<controller>/<id>'
         $this->_template = preg_replace('/<(\w+):?([^>]+)?>/', '<$1>', $this->pattern);
+        // $this->pattern最终是'#^(?P<controller>\w+)/(?P<id>\d+)$#u'
         $this->pattern = '#^' . trim(strtr($this->_template, $tr), '/') . '$#u';
 
         if (!empty($this->_routeParams)) {

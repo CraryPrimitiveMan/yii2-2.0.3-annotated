@@ -241,6 +241,7 @@ class UrlManager extends Component
                 // ]
             }
             if (is_array($rule)) {
+                // 默认创建yii\web\UrlRule对象，也可以自定义相应的UrlRule类
                 $rule = Yii::createObject(array_merge($this->ruleConfig, $rule));
             }
             if (!$rule instanceof UrlRuleInterface) {
