@@ -71,6 +71,8 @@ use Yii;
  * That is, a `$config` parameter (defaults to `[]`) should be declared as the last parameter
  * of the constructor, and the parent implementation should be called at the end of the constructor.
  *
+ * Yii最基础的类，大多数类都继承了该类
+ *
  * @author Qiang Xue <qiang.xue@gmail.com>
  * @since 2.0
  */
@@ -78,6 +80,8 @@ class Object implements Configurable
 {
     /**
      * Returns the fully qualified name of this class.
+     * 获取静态方法调用的类名。返回类的名称，如果不是在类中调用则返回 FALSE。
+     *
      * @return string the fully qualified name of this class.
      */
     public static function className()
@@ -101,9 +105,11 @@ class Object implements Configurable
      */
     public function __construct($config = [])
     {
+        // 根据config内容初始化该Object
         if (!empty($config)) {
             Yii::configure($this, $config);
         }
+        // 调用init()方法，继承该类的类可以重写此方法，用于初始化
         $this->init();
     }
 
@@ -121,6 +127,9 @@ class Object implements Configurable
      *
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$value = $object->property;`.
+     *
+     * 魔术方法，实现getter
+     *
      * @param string $name the property name
      * @return mixed the property value
      * @throws UnknownPropertyException if the property is not defined
@@ -144,6 +153,9 @@ class Object implements Configurable
      *
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$object->property = $value;`.
+     *
+     * 魔术方法，实现setter
+     *
      * @param string $name the property name or the event name
      * @param mixed $value the property value
      * @throws UnknownPropertyException if the property is not defined
@@ -169,6 +181,9 @@ class Object implements Configurable
      * will be implicitly called when executing `isset($object->property)`.
      *
      * Note that if the property is not defined, false will be returned.
+     *
+     * 魔术方法，实现isset，基于getter实现，有getter方法的属性才算存在
+     *
      * @param string $name the property name or the event name
      * @return boolean whether the named property is set (not null).
      */
@@ -190,6 +205,9 @@ class Object implements Configurable
      *
      * Note that if the property is not defined, this method will do nothing.
      * If the property is read-only, it will throw an exception.
+     *
+     * 魔术方法，实现unset，基于setter实现，有setter方法的属性才能unset掉
+     *
      * @param string $name the property name
      * @throws InvalidCallException if the property is read only.
      */
@@ -226,6 +244,8 @@ class Object implements Configurable
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      *
+     * 检查对象或类是否具有$name属性，如果$checkVars为true，则不局限于是否有getter/setter
+     *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
      * @return boolean whether the property is defined
@@ -245,6 +265,8 @@ class Object implements Configurable
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      *
+     * 检查对象或类是否能够获取$name属性，如果$checkVars为true，则不局限于是否有getter
+     *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
      * @return boolean whether the property can be read
@@ -263,6 +285,8 @@ class Object implements Configurable
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      *
+     * 检查对象或类是否能够设置$name属性，如果$checkVars为true，则不局限于是否有setter
+     *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
      * @return boolean whether the property can be written
@@ -278,6 +302,9 @@ class Object implements Configurable
      *
      * The default implementation is a call to php function `method_exists()`.
      * You may override this method when you implemented the php magic method `__call()`.
+     *
+     * 检查对象或类是否具有$name方法
+     *
      * @param string $name the method name
      * @return boolean whether the method is defined
      */

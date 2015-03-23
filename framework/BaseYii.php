@@ -529,6 +529,9 @@ class BaseYii
 
     /**
      * Configures an object with the initial property values.
+     *
+     * 配置初始化一个Object，为该对象添加属性
+     *
      * @param object $object the object to be configured
      * @param array $properties the property initial values given in terms of name-value pairs.
      * @return object the object itself
