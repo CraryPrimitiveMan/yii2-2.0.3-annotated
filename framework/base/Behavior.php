@@ -52,6 +52,8 @@ class Behavior extends Object
      * ]
      * ~~~
      *
+     * 声明事件的handlers
+     *
      * @return array events (array keys) and the corresponding event handler methods (array values).
      */
     public function events()
@@ -64,6 +66,7 @@ class Behavior extends Object
      * The default implementation will set the [[owner]] property
      * and attach event handlers as declared in [[events]].
      * Make sure you call the parent implementation if you override this method.
+     * 为owner添加event
      * @param Component $owner the component that this behavior is to be attached to.
      */
     public function attach($owner)
@@ -79,6 +82,7 @@ class Behavior extends Object
      * The default implementation will unset the [[owner]] property
      * and detach event handlers declared in [[events]].
      * Make sure you call the parent implementation if you override this method.
+     * 移除owner的event，并将owner置空
      */
     public function detach()
     {

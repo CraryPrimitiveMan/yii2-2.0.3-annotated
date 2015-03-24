@@ -27,6 +27,7 @@ class Event extends Object
     /**
      * @var string the event name. This property is set by [[Component::trigger()]] and [[trigger()]].
      * Event handlers may use this property to check what event it is handling.
+     * 事件的名字
      */
     public $name;
     /**
@@ -34,12 +35,14 @@ class Event extends Object
      * set as the object whose "trigger()" method is called.
      * This property may also be a `null` when this event is a
      * class-level event which is triggered in a static context.
+     * 触发事件的对象
      */
     public $sender;
     /**
      * @var boolean whether the event is handled. Defaults to false.
      * When a handler sets this to be true, the event processing will stop and
      * ignore the rest of the uninvoked event handlers.
+     * 事件是否被handle，当handled被设置为true时，执行到这个event的时候，会停止，并忽略剩下的event
      */
     public $handled = false;
     /**
@@ -48,6 +51,9 @@ class Event extends Object
      */
     public $data;
 
+    /**
+     * 存储所有的event，因为是static的属性，所有的event对象/类都共享这一份数据
+     */
     private static $_events = [];
 
 
@@ -70,6 +76,8 @@ class Event extends Object
      *
      * For more details about how to declare an event handler, please refer to [[Component::on()]].
      *
+     * 为一个类添加事件
+     *
      * @param string $class the fully qualified class name to which the event handler needs to attach.
      * @param string $name the event name.
      * @param callable $handler the event handler.
@@ -82,7 +90,9 @@ class Event extends Object
      */
     public static function on($class, $name, $handler, $data = null, $append = true)
     {
+        // 去掉class最左边的斜杠
         $class = ltrim($class, '\\');
+        // 如果append为true，就放到$_events的最后，否则放到最前面
         if ($append || empty(self::$_events[$name][$class])) {
             self::$_events[$name][$class][] = [$handler, $data];
         } else {
@@ -94,6 +104,8 @@ class Event extends Object
      * Detaches an event handler from a class-level event.
      *
      * This method is the opposite of [[on()]].
+     *
+     * 移除一个类的事件
      *
      * @param string $class the fully qualified class name from which the event handler needs to be detached.
      * @param string $name the event name.
@@ -109,10 +121,12 @@ class Event extends Object
             return false;
         }
         if ($handler === null) {
+            // 如果handler为空，直接将在该类下该事件移除
             unset(self::$_events[$name][$class]);
             return true;
         } else {
             $removed = false;
+            // 如果$handler不为空，循环_events找到相应的handler，只移除这个handler和data组成的数组
             foreach (self::$_events[$name][$class] as $i => $event) {
                 if ($event[0] === $handler) {
                     unset(self::$_events[$name][$class][$i]);
@@ -120,6 +134,7 @@ class Event extends Object
                 }
             }
             if ($removed) {
+                // 移除之后，使数组重新变成一个自然数组
                 self::$_events[$name][$class] = array_values(self::$_events[$name][$class]);
             }
 
@@ -131,6 +146,7 @@ class Event extends Object
      * Returns a value indicating whether there is any handler attached to the specified class-level event.
      * Note that this method will also check all parent classes to see if there is any handler attached
      * to the named event.
+     * 检测在某个类是否具有某个事件
      * @param string|object $class the object or the fully qualified class name specifying the class-level event.
      * @param string $name the event name.
      * @return boolean whether there is any handler attached to the event.
@@ -138,13 +154,17 @@ class Event extends Object
     public static function hasHandlers($class, $name)
     {
         if (empty(self::$_events[$name])) {
+            // 不存在，直接返回
             return false;
         }
         if (is_object($class)) {
+            // 如果是一个object，就获取其类名
             $class = get_class($class);
         } else {
+            // 如果是一个类名，就去掉class最左边的斜杠
             $class = ltrim($class, '\\');
         }
+        // 如果该类中找不到，就去父类中找，知道找到或者没有父类了为止
         do {
             if (!empty(self::$_events[$name][$class])) {
                 return true;
@@ -158,6 +178,7 @@ class Event extends Object
      * Triggers a class-level event.
      * This method will cause invocation of event handlers that are attached to the named event
      * for the specified class and all its parent classes.
+     * 触发某个类的某个事件
      * @param string|object $class the object or the fully qualified class name specifying the class-level event.
      * @param string $name the event name.
      * @param Event $event the event parameter. If not set, a default [[Event]] object will be created.
@@ -168,24 +189,33 @@ class Event extends Object
             return;
         }
         if ($event === null) {
+            // event不存在，就创建一个event对象
             $event = new static;
         }
+        // 设置event对象的属性
         $event->handled = false;
         $event->name = $name;
 
         if (is_object($class)) {
             if ($event->sender === null) {
+                // 如果$class是个对象，并且是sender为空，就将$class赋给sender
                 $event->sender = $class;
             }
             $class = get_class($class);
         } else {
             $class = ltrim($class, '\\');
         }
+        // 循环执行类的event，直到遇到$event->handled或者没有父类了为止
         do {
             if (!empty(self::$_events[$name][$class])) {
                 foreach (self::$_events[$name][$class] as $handler) {
+                    // 将参数赋到event对象的data属性上
                     $event->data = $handler[1];
+                    // 调用$handler方法
+                    // 在方法中，可以用$this->data取到相应的参数
+                    // 也可以在其中设置$this->handled的值，中断event
                     call_user_func($handler[0], $event);
+                    // 当某个handled被设置为true时，执行到这个event的时候，会停止，并忽略剩下的event
                     if ($event->handled) {
                         return;
                     }

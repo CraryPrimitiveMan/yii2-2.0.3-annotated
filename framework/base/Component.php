@@ -98,10 +98,12 @@ use Yii;
 class Component extends Object
 {
     /**
+     * 用来存储该对象的event
      * @var array the attached event handlers (event name => handlers)
      */
     private $_events = [];
     /**
+     * 用来存储该对象的behavior
      * @var Behavior[]|null the attached behaviors (behavior name => behavior). This is `null` when not initialized.
      */
     private $_behaviors;
@@ -116,6 +118,9 @@ class Component extends Object
      *
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$value = $component->property;`.
+     *
+     * 重写Object中的getter方法，添加对behaviors的处理，循环behaviors，如果其中有相应的方法，就执行它
+     *
      * @param string $name the property name
      * @return mixed the property value or the value of a behavior's property
      * @throws UnknownPropertyException if the property is not defined
@@ -155,6 +160,12 @@ class Component extends Object
      *
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$component->property = $value;`.
+     *
+     * 重写Object中的setter方法
+     * 如果$name是'on xyz'，就会将xyz事件添加到该对象中
+     * 如果$name是'as xyz'，就会将xyz行为添加到该对象中
+     * 添加对behaviors的处理，循环behaviors，如果其中有相应的属性，就设置它
+     *
      * @param string $name the property name or the event name
      * @param mixed $value the property value
      * @throws UnknownPropertyException if the property is not defined
@@ -170,11 +181,13 @@ class Component extends Object
 
             return;
         } elseif (strncmp($name, 'on ', 3) === 0) {
+            // 添加事件
             // on event: attach event handler
             $this->on(trim(substr($name, 3)), $value);
 
             return;
         } elseif (strncmp($name, 'as ', 3) === 0) {
+            // 添加行为
             // as behavior: attach behavior
             $name = trim(substr($name, 3));
             $this->attachBehavior($name, $value instanceof Behavior ? $value : Yii::createObject($value));
@@ -207,6 +220,9 @@ class Component extends Object
      *
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `isset($component->property)`.
+     *
+     * 重写Object中的isset方法，添加对behaviors的处理，循环behaviors，如果其中有相应的属性，就认为有
+     *
      * @param string $name the property name or the event name
      * @return boolean whether the named property is null
      */
@@ -236,6 +252,9 @@ class Component extends Object
      *
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `unset($component->property)`.
+     *
+     * 重写Object中的unset方法，添加对behaviors的处理，循环behaviors，如果其中有相应的属性，设置为空
+     *
      * @param string $name the property name
      * @throws InvalidCallException if the property is read only.
      */
@@ -266,6 +285,9 @@ class Component extends Object
      *
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when an unknown method is being invoked.
+     *
+     * 重写Object中的call方法，添加对behaviors的处理，循环behaviors，如果其中有相应方法，就执行该behavior的方法
+     *
      * @param string $name the method name
      * @param array $params method parameters
      * @return mixed the method return value
@@ -285,6 +307,8 @@ class Component extends Object
     /**
      * This method is called after the object is created by cloning an existing one.
      * It removes all behaviors because they are attached to the old object.
+     *
+     * 执行clone时，将其_events和_behaviors设置为空
      */
     public function __clone()
     {
@@ -300,6 +324,8 @@ class Component extends Object
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      * - an attached behavior has a property of the given name (when `$checkBehaviors` is true).
+     *
+     * 与Object中的方法类似，只是添加了是否检测behavior的参数
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -432,6 +458,8 @@ class Component extends Object
 
     /**
      * Returns a value indicating whether there is any handler attached to the named event.
+     *
+     * 判断_events中的一个event是否具有handler
      * @param string $name the event name
      * @return boolean whether there is any handler attached to the event.
      */
@@ -638,6 +666,7 @@ class Component extends Object
      */
     public function ensureBehaviors()
     {
+        // 如果$this->_behaviors为空，获取$this->behaviors()中的behaviors，并存储到$this->_behaviors数组中
         if ($this->_behaviors === null) {
             $this->_behaviors = [];
             foreach ($this->behaviors() as $name => $behavior) {
@@ -648,6 +677,9 @@ class Component extends Object
 
     /**
      * Attaches a behavior to this component.
+     *
+     * 内部使用的为该对象添加behavior的方法
+     *
      * @param string|integer $name the name of the behavior. If this is an integer, it means the behavior
      * is an anonymous one. Otherwise, the behavior is a named one and any existing behavior with the same name
      * will be detached first.
