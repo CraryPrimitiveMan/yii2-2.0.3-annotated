@@ -86,6 +86,8 @@ class Object implements Configurable
      */
     public static function className()
     {
+        // get_called_class -- 后期静态绑定（"Late Static Binding"）类的名称
+        // 就是用那个类调用的这个方法，就返回那个类，返回值中带有namespace
         return get_called_class();
     }
 

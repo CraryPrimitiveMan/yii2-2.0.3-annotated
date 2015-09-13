@@ -501,10 +501,13 @@ class Component extends Object
      */
     public function on($name, $handler, $data = null, $append = true)
     {
+        // 保证 behaviors 都加载进来了
         $this->ensureBehaviors();
+        // $append表示是否就加到 event 的后面
         if ($append || empty($this->_events[$name])) {
             $this->_events[$name][] = [$handler, $data];
         } else {
+            // 加到 event 的前面
             array_unshift($this->_events[$name], [$handler, $data]);
         }
     }
@@ -520,22 +523,27 @@ class Component extends Object
      */
     public function off($name, $handler = null)
     {
+        // 保证 behaviors 都加载进来了
         $this->ensureBehaviors();
+        // 相应的事件不存在，就返回false
         if (empty($this->_events[$name])) {
             return false;
         }
+        // 没有handler，就意味着要全部去掉
         if ($handler === null) {
             unset($this->_events[$name]);
             return true;
         } else {
             $removed = false;
             foreach ($this->_events[$name] as $i => $event) {
+                // $event[0]是handler，$event[1]是数据
                 if ($event[0] === $handler) {
                     unset($this->_events[$name][$i]);
                     $removed = true;
                 }
             }
             if ($removed) {
+                // 如果有移出事件的handler，就需要重新构建以下索引，否则会出现index为1,3,4的情况
                 $this->_events[$name] = array_values($this->_events[$name]);
             }
             return $removed;
@@ -551,8 +559,10 @@ class Component extends Object
      */
     public function trigger($name, Event $event = null)
     {
+        // 保证 behaviors 都加载进来了
         $this->ensureBehaviors();
         if (!empty($this->_events[$name])) {
+            // 构建Event对象，为传入到handler函数中做准备
             if ($event === null) {
                 $event = new Event;
             }
@@ -562,15 +572,19 @@ class Component extends Object
             $event->handled = false;
             $event->name = $name;
             foreach ($this->_events[$name] as $handler) {
+                // 给event的data属性赋值
                 $event->data = $handler[1];
+                // handler的函数中传入了一个Event对象
                 call_user_func($handler[0], $event);
                 // stop further handling if the event is handled
+                // 事件是否被handle，当handled被设置为true时，执行到这个event的时候，会停止，并忽略剩下的event
                 if ($event->handled) {
                     return;
                 }
             }
         }
         // invoke class-level attached handlers
+        // 触发class级别的handler
         Event::trigger($this, $name, $event);
     }
 
@@ -689,6 +703,7 @@ class Component extends Object
     private function attachBehaviorInternal($name, $behavior)
     {
         if (!($behavior instanceof Behavior)) {
+            // $behavior不是Behavior对象，就认为是配置，通过它创建一个
             $behavior = Yii::createObject($behavior);
         }
         if (is_int($name)) {
@@ -696,6 +711,7 @@ class Component extends Object
             $this->_behaviors[] = $behavior;
         } else {
             if (isset($this->_behaviors[$name])) {
+                // 存在就先解绑掉
                 $this->_behaviors[$name]->detach();
             }
             $behavior->attach($this);

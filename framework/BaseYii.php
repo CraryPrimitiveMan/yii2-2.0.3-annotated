@@ -530,7 +530,7 @@ class BaseYii
     /**
      * Configures an object with the initial property values.
      *
-     * 配置初始化一个Object，为该对象添加属性
+     * 配置初始化一个Object，为该对象属性赋值
      *
      * @param object $object the object to be configured
      * @param array $properties the property initial values given in terms of name-value pairs.
@@ -538,6 +538,7 @@ class BaseYii
      */
     public static function configure($object, $properties)
     {
+        // 遍历配置里面的内容，一一赋值到相应的属性上
         foreach ($properties as $name => $value) {
             $object->$name = $value;
         }
