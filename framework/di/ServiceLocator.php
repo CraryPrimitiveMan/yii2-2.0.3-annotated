@@ -50,10 +50,12 @@ use yii\base\InvalidConfigException;
 class ServiceLocator extends Component
 {
     /**
+     * 存储component的实例，key是component的ID
      * @var array shared component instances indexed by their IDs
      */
     private $_components = [];
     /**
+     * 存储component的配置，key是component的ID
      * @var array component definitions indexed by their IDs
      */
     private $_definitions = [];
@@ -67,6 +69,8 @@ class ServiceLocator extends Component
      */
     public function __get($name)
     {
+        // 获取component，只要定义中有，就可以拿到
+        // 未实例化，get方法会去实例化
         if ($this->has($name)) {
             return $this->get($name);
         } else {
@@ -82,6 +86,7 @@ class ServiceLocator extends Component
      */
     public function __isset($name)
     {
+        // 可以看到，如果用isset去判断是否含有某个component，只能判断已经实例化过的component
         if ($this->has($name, true)) {
             return true;
         } else {
@@ -105,6 +110,7 @@ class ServiceLocator extends Component
      */
     public function has($id, $checkInstance = false)
     {
+        // 如果要检查是否有component的实例，就将$checkInstance设置为true
         return $checkInstance ? isset($this->_components[$id]) : isset($this->_definitions[$id]);
     }
 
@@ -122,17 +128,23 @@ class ServiceLocator extends Component
     public function get($id, $throwException = true)
     {
         if (isset($this->_components[$id])) {
+            // 如果存在就直接返回
             return $this->_components[$id];
         }
 
         if (isset($this->_definitions[$id])) {
+            // 存在component的配置
             $definition = $this->_definitions[$id];
+            // 是一个object还不是匿名函数，就代表是一个component的实例
+            // 继承自Closure代表是一个匿名函数
             if (is_object($definition) && !$definition instanceof Closure) {
                 return $this->_components[$id] = $definition;
             } else {
+                // 不是component的实例，就根据配置去创建一个
                 return $this->_components[$id] = Yii::createObject($definition);
             }
         } elseif ($throwException) {
+            // 都不存在并且允许抛异常的话，就抛异常
             throw new InvalidConfigException("Unknown component ID: $id");
         } else {
             return null;
@@ -185,18 +197,25 @@ class ServiceLocator extends Component
     public function set($id, $definition)
     {
         if ($definition === null) {
+            // 如果配置项为空，就将该component移除
             unset($this->_components[$id], $this->_definitions[$id]);
             return;
         }
 
+        // 如果配置项存在，就只移除component的实例
         unset($this->_components[$id]);
 
+        // is_callable — 检测参数是否为合法的可调用结构
+        // is_callable的第二个参数如果设置为 TRUE，这个函数仅仅验证$definition可能是函数或方法。
+        // 它仅仅拒绝非字符，或者未包含能用于回调函数的有效结构。
+        // 有效的应该包含两个元素，第一个是一个对象或者字符，第二个元素是个字符。
         if (is_object($definition) || is_callable($definition, true)) {
             // an object, a class name, or a PHP callable
             $this->_definitions[$id] = $definition;
         } elseif (is_array($definition)) {
             // a configuration array
             if (isset($definition['class'])) {
+                // 如果是数组，则必须存在class的定义
                 $this->_definitions[$id] = $definition;
             } else {
                 throw new InvalidConfigException("The configuration for the \"$id\" component must contain a \"class\" element.");
@@ -212,6 +231,7 @@ class ServiceLocator extends Component
      */
     public function clear($id)
     {
+        // 清除掉某一个component
         unset($this->_definitions[$id], $this->_components[$id]);
     }
 
@@ -222,6 +242,7 @@ class ServiceLocator extends Component
      */
     public function getComponents($returnDefinitions = true)
     {
+        // 返回所有component的定义或者配置
         return $returnDefinitions ? $this->_definitions : $this->_components;
     }
 
@@ -254,6 +275,7 @@ class ServiceLocator extends Component
      */
     public function setComponents($components)
     {
+        // 设置多个component
         foreach ($components as $id => $component) {
             $this->set($id, $component);
         }
