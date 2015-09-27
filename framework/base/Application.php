@@ -194,11 +194,15 @@ abstract class Application extends Module
      */
     public function __construct($config = [])
     {
+        // 将自身的实例绑到Yii的$app上
         Yii::$app = $this;
+        // 将自身加入到loadedModules中
         $this->setInstance($this);
 
+        // 设置状态为刚开始
         $this->state = self::STATE_BEGIN;
 
+        // 做预处理，包括设置alias和merge核心components的配置
         $this->preInit($config);
 
         $this->registerErrorHandler($config);
@@ -216,11 +220,14 @@ abstract class Application extends Module
      */
     public function preInit(&$config)
     {
+        // 使用了&符号，表示$config的修改会保留
         if (!isset($config['id'])) {
             throw new InvalidConfigException('The "id" configuration for the Application is required.');
         }
         if (isset($config['basePath'])) {
+            // 项目的root路径
             $this->setBasePath($config['basePath']);
+            // 用完删掉
             unset($config['basePath']);
         } else {
             throw new InvalidConfigException('The "basePath" configuration for the Application is required.');
@@ -230,6 +237,7 @@ abstract class Application extends Module
             $this->setVendorPath($config['vendorPath']);
             unset($config['vendorPath']);
         } else {
+            // 不存在，就设置默认值
             // set "@vendor"
             $this->getVendorPath();
         }
@@ -237,6 +245,7 @@ abstract class Application extends Module
             $this->setRuntimePath($config['runtimePath']);
             unset($config['runtimePath']);
         } else {
+            // 不存在，就设置默认值
             // set "@runtime"
             $this->getRuntimePath();
         }
@@ -245,14 +254,17 @@ abstract class Application extends Module
             $this->setTimeZone($config['timeZone']);
             unset($config['timeZone']);
         } elseif (!ini_get('date.timezone')) {
+            // 默认时区是零时区
             $this->setTimeZone('UTC');
         }
 
         // merge core components with custom components
         foreach ($this->coreComponents() as $id => $component) {
             if (!isset($config['components'][$id])) {
+                // 如果配置中没有配置相应的核心component，就赋给它
                 $config['components'][$id] = $component;
             } elseif (is_array($config['components'][$id]) && !isset($config['components'][$id]['class'])) {
+                // 如果存在相应的核心component，但没有定义它的class，就直接赋到class的key上
                 $config['components'][$id]['class'] = $component['class'];
             }
         }
@@ -325,12 +337,15 @@ abstract class Application extends Module
      */
     protected function registerErrorHandler(&$config)
     {
+        // YII_ENABLE_ERROR_HANDLER，在BaseYii中被定义为true
         if (YII_ENABLE_ERROR_HANDLER) {
             if (!isset($config['components']['errorHandler']['class'])) {
                 echo "Error: no errorHandler component is configured.\n";
                 exit(1);
             }
+            // 其实质是将$config['components']['errorHandler']的内容设置到了$this->_definitions['errorHandler']中
             $this->set('errorHandler', $config['components']['errorHandler']);
+            // 删除掉errorHandler的配置内容
             unset($config['components']['errorHandler']);
             $this->getErrorHandler()->register();
         }
@@ -356,6 +371,7 @@ abstract class Application extends Module
     public function setBasePath($path)
     {
         parent::setBasePath($path);
+        // 使用@app来记录basePath
         Yii::setAlias('@app', $this->getBasePath());
     }
 
@@ -413,6 +429,7 @@ abstract class Application extends Module
     public function getRuntimePath()
     {
         if ($this->_runtimePath === null) {
+            // 不存在，就将其设置为basePath/runtime
             $this->setRuntimePath($this->getBasePath() . DIRECTORY_SEPARATOR . 'runtime');
         }
 
@@ -425,7 +442,9 @@ abstract class Application extends Module
      */
     public function setRuntimePath($path)
     {
+        // 获取runtimePath的路径，并存到_runtimePath中
         $this->_runtimePath = Yii::getAlias($path);
+        // 设置@runtime的alias
         Yii::setAlias('@runtime', $this->_runtimePath);
     }
 
@@ -439,6 +458,7 @@ abstract class Application extends Module
     public function getVendorPath()
     {
         if ($this->_vendorPath === null) {
+            // 不存在，就将其设置为basePath/vendor
             $this->setVendorPath($this->getBasePath() . DIRECTORY_SEPARATOR . 'vendor');
         }
 
@@ -451,9 +471,13 @@ abstract class Application extends Module
      */
     public function setVendorPath($path)
     {
+        // 获取vendor的路径，并存到_vendorPath中
         $this->_vendorPath = Yii::getAlias($path);
+        // 设置@vendor的alias
         Yii::setAlias('@vendor', $this->_vendorPath);
+        // 设置@bower的alias
         Yii::setAlias('@bower', $this->_vendorPath . DIRECTORY_SEPARATOR . 'bower');
+        // 设置@npm的alias
         Yii::setAlias('@npm', $this->_vendorPath . DIRECTORY_SEPARATOR . 'npm');
     }
 
@@ -467,6 +491,7 @@ abstract class Application extends Module
      */
     public function getTimeZone()
     {
+        // date_default_timezone_get — 取得一个脚本中所有日期时间函数所使用的默认时区
         return date_default_timezone_get();
     }
 
@@ -479,6 +504,7 @@ abstract class Application extends Module
      */
     public function setTimeZone($value)
     {
+        // date_default_timezone_set — 设定用于一个脚本中所有日期时间函数的默认时区
         date_default_timezone_set($value);
     }
 
@@ -615,6 +641,7 @@ abstract class Application extends Module
      */
     public function coreComponents()
     {
+        // 定义默认的核心组件
         return [
             'log' => ['class' => 'yii\log\Dispatcher'],
             'view' => ['class' => 'yii\web\View'],

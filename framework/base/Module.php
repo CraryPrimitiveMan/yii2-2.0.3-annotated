@@ -157,9 +157,12 @@ class Module extends ServiceLocator
      */
     public static function setInstance($instance)
     {
+        // get_called_class和get_class获取的值都是带namespace的
         if ($instance === null) {
+            // 如果实例不存在，就将其从$app的loadedModules移出掉
             unset(Yii::$app->loadedModules[get_called_class()]);
         } else {
+            // 如果实例存在，就将其加入到$app的loadedModules里
             Yii::$app->loadedModules[get_class($instance)] = $instance;
         }
     }
@@ -217,8 +220,10 @@ class Module extends ServiceLocator
     public function setBasePath($path)
     {
         $path = Yii::getAlias($path);
+        // realpath — 返回规范化的绝对路径名
         $p = realpath($path);
         if ($p !== false && is_dir($p)) {
+            // 路径存在，且是一个目录，就将它存到当前对象的$_basePath中
             $this->_basePath = $p;
         } else {
             throw new InvalidParamException("The directory does not exist: $path");

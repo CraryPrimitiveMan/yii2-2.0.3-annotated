@@ -145,6 +145,7 @@ class Application extends \yii\base\Application
      */
     public function coreComponents()
     {
+        // web的默认核心组件
         return array_merge(parent::coreComponents(), [
             'request' => ['class' => 'yii\web\Request'],
             'response' => ['class' => 'yii\web\Response'],

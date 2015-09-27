@@ -229,32 +229,46 @@ class BaseYii
     public static function setAlias($alias, $path)
     {
         if (strncmp($alias, '@', 1)) {
+            // 如果不是以@开头，就将@拼进去
             $alias = '@' . $alias;
         }
+        // 获取/在$alias中首次出现的位置
         $pos = strpos($alias, '/');
+        // 如果存在，$root就是$alias中/前的内容，否则就是整个$alias
         $root = $pos === false ? $alias : substr($alias, 0, $pos);
         if ($path !== null) {
+            // 如果$path以@开头，使用getAlias去获取路径，否则，就去除掉最右边的/
             $path = strncmp($path, '@', 1) ? rtrim($path, '\\/') : static::getAlias($path);
             if (!isset(static::$aliases[$root])) {
+                // 如果不存在这个$root的$aliase
                 if ($pos === false) {
+                    // 没有/，就将$path直接赋值为$root的路径
                     static::$aliases[$root] = $path;
                 } else {
+                    // 否则，就将$path直接赋值为$root下的$alias的路径
                     static::$aliases[$root] = [$alias => $path];
                 }
             } elseif (is_string(static::$aliases[$root])) {
+                // 如果存在，而且是个string类型
                 if ($pos === false) {
+                    // 没有/，就直接覆盖
                     static::$aliases[$root] = $path;
                 } else {
+                    // 否则，就合并到一起
                     static::$aliases[$root] = [
                         $alias => $path,
                         $root => static::$aliases[$root],
                     ];
                 }
             } else {
+                // 这种，正常是个array
+                // 直接添加进去
                 static::$aliases[$root][$alias] = $path;
+                // krsort — 对数组按照键名逆向排序
                 krsort(static::$aliases[$root]);
             }
         } elseif (isset(static::$aliases[$root])) {
+            // $path为空，就是要移除相应的$aliase
             if (is_array(static::$aliases[$root])) {
                 unset(static::$aliases[$root][$alias]);
             } elseif ($pos === false) {
@@ -358,12 +372,15 @@ class BaseYii
     public static function createObject($type, array $params = [])
     {
         if (is_string($type)) {
+            // 如果是一个字符串，就代表是类的名称，如：yii\web\ErrorHandler
             return static::$container->get($type, $params);
         } elseif (is_array($type) && isset($type['class'])) {
+            // 是个数组，其中的$type['class']代表类的名称
             $class = $type['class'];
             unset($type['class']);
             return static::$container->get($class, $params, $type);
         } elseif (is_callable($type, true)) {
+            // 如果是一个function，就直接调用返回
             return call_user_func($type, $params);
         } elseif (is_array($type)) {
             throw new InvalidConfigException('Object configuration must be an array containing a "class" element.');
