@@ -380,7 +380,7 @@ class BaseYii
             unset($type['class']);
             return static::$container->get($class, $params, $type);
         } elseif (is_callable($type, true)) {
-            // 如果是一个function，就直接调用返回
+            // 是个PHP callable，那就调用它，并将其返回值作为服务或组件的实例返回
             return call_user_func($type, $params);
         } elseif (is_array($type)) {
             throw new InvalidConfigException('Object configuration must be an array containing a "class" element.');

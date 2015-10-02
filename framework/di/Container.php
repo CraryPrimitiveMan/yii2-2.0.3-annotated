@@ -97,23 +97,28 @@ class Container extends Component
 {
     /**
      * @var array singleton objects indexed by their types
+     * 用于保存单例Singleton对象，以对象类型为键
      */
     private $_singletons = [];
     /**
      * @var array object definitions indexed by their types
+     * 用于保存依赖的定义，以对象类型为键
      */
     private $_definitions = [];
     /**
      * @var array constructor parameters indexed by object types
+     * 用于保存构造函数的参数，以对象类型为键
      */
     private $_params = [];
     /**
      * @var array cached ReflectionClass objects indexed by class/interface names
+     * 用于缓存ReflectionClass对象，以类名或接口名为键
      */
     private $_reflections = [];
     /**
      * @var array cached dependencies indexed by class/interface names. Each class name
      * is associated with a list of constructor parameter types or default values.
+     * 用于缓存依赖信息，以类名或接口名为键
      */
     private $_dependencies = [];
 
@@ -146,20 +151,26 @@ class Container extends Component
     {
         if (isset($this->_singletons[$class])) {
             // singleton
+            // 如果Singleton对象的数组中有，就直接返回
             return $this->_singletons[$class];
         } elseif (!isset($this->_definitions[$class])) {
+            // 如果定义的数组中没有，就去构建它
             return $this->build($class, $params, $config);
         }
 
         $definition = $this->_definitions[$class];
 
         if (is_callable($definition, true)) {
+            // 如果$definition是callable，就先将参数合并，再将其中的Instance实例替换掉
             $params = $this->resolveDependencies($this->mergeParams($class, $params));
+            // 调用$definition
             $object = call_user_func($definition, $this, $params, $config);
         } elseif (is_array($definition)) {
+            // 如果是一个数组
             $concrete = $definition['class'];
             unset($definition['class']);
 
+            // 合并配置和参数
             $config = array_merge($definition, $config);
             $params = $this->mergeParams($class, $params);
 
@@ -169,6 +180,7 @@ class Container extends Component
                 $object = $this->get($concrete, $params, $config);
             }
         } elseif (is_object($definition)) {
+            // 如果$definition是个对象，就直接保存到_singletons中
             return $this->_singletons[$class] = $definition;
         } else {
             throw new InvalidConfigException("Unexpected object definition type: " . gettype($definition));
@@ -176,6 +188,7 @@ class Container extends Component
 
         if (array_key_exists($class, $this->_singletons)) {
             // singleton
+            // 如果_singletons中没有这个类的实例，就保存一份
             $this->_singletons[$class] = $object;
         }
 
@@ -246,7 +259,9 @@ class Container extends Component
      */
     public function set($class, $definition = [], array $params = [])
     {
+        // 处理definition，并存入到_definitions中
         $this->_definitions[$class] = $this->normalizeDefinition($class, $definition);
+        // 将$params存入_params中
         $this->_params[$class] = $params;
         unset($this->_singletons[$class]);
         return $this;
@@ -267,8 +282,10 @@ class Container extends Component
      */
     public function setSingleton($class, $definition = [], array $params = [])
     {
+        // 同上
         $this->_definitions[$class] = $this->normalizeDefinition($class, $definition);
         $this->_params[$class] = $params;
+        // 这里是单例，表示这个还会继续用到，所以不用unset，只需赋为空即可
         $this->_singletons[$class] = null;
         return $this;
     }
@@ -281,6 +298,7 @@ class Container extends Component
      */
     public function has($class)
     {
+        // 判断是否已经定义了某个服务或组件
         return isset($this->_definitions[$class]);
     }
 
@@ -293,6 +311,8 @@ class Container extends Component
      */
     public function hasSingleton($class, $checkInstance = false)
     {
+        // 当 $checkInstance === false 时，用于判断是否已经定义了某个服务或组件
+        // 当 $checkInstance === true 时，用于判断是否已经有了某人服务或组件的实例
         return $checkInstance ? isset($this->_singletons[$class]) : array_key_exists($class, $this->_singletons);
     }
 
@@ -302,6 +322,7 @@ class Container extends Component
      */
     public function clear($class)
     {
+        // 清空相应类的definition和singleton
         unset($this->_definitions[$class], $this->_singletons[$class]);
     }
 
@@ -315,13 +336,18 @@ class Container extends Component
     protected function normalizeDefinition($class, $definition)
     {
         if (empty($definition)) {
+            // 定义为空
             return ['class' => $class];
         } elseif (is_string($definition)) {
+            // $definition是字符串，就表明它是类名，$class是简称
             return ['class' => $definition];
         } elseif (is_callable($definition, true) || is_object($definition)) {
+            // 是个PHP callable或者是个对象，就直接返回
             return $definition;
         } elseif (is_array($definition)) {
+            // 是个数组
             if (!isset($definition['class'])) {
+                // 定义中不存在class键，$class必须是带namespace的类名
                 if (strpos($class, '\\') !== false) {
                     $definition['class'] = $class;
                 } else {
@@ -355,23 +381,33 @@ class Container extends Component
     protected function build($class, $params, $config)
     {
         /* @var $reflection ReflectionClass */
+        // 先获取类的反射的实例和要依赖的参数（Instance的数组）
         list ($reflection, $dependencies) = $this->getDependencies($class);
 
+        // 用传入的参数去替换掉默认的参数
         foreach ($params as $index => $param) {
             $dependencies[$index] = $param;
         }
 
+        // 将Instance实例转化成相应的id中存储的类名的实例，即参数的真正的实例
         $dependencies = $this->resolveDependencies($dependencies, $reflection);
         if (empty($config)) {
+            // ReflectionClass::newInstanceArgs — 从给出的参数创建一个新的类实例
+            // 如果$config是空，直接创建一个新的类的实例返回
             return $reflection->newInstanceArgs($dependencies);
         }
 
+        // ReflectionClass::implementsInterface — 检查它是否实现了一个接口（interface）
+        // config不为空
         if (!empty($dependencies) && $reflection->implementsInterface('yii\base\Configurable')) {
+            // 依赖不为空而且class实现了 yii\base\Configurable 的接口
+            // 实现了 yii\base\Configurable 的接口，就意味着类的构造函数的最后一个参数是$config
             // set $config as the last parameter (existing one will be overwritten)
             $dependencies[count($dependencies) - 1] = $config;
             return $reflection->newInstanceArgs($dependencies);
         } else {
             $object = $reflection->newInstanceArgs($dependencies);
+            // 循环$config，将$config的键值对赋给相应的类的实例
             foreach ($config as $name => $value) {
                 $object->$name = $value;
             }
@@ -388,10 +424,13 @@ class Container extends Component
     protected function mergeParams($class, $params)
     {
         if (empty($this->_params[$class])) {
+            // 如果_params中不存在，就直接返回$params
             return $params;
         } elseif (empty($params)) {
+            // 如果_params中存在，且params为空，就返回_params中的内容
             return $this->_params[$class];
         } else {
+            // 如果都不为空，就将两者合并起来，以$params为主
             $ps = $this->_params[$class];
             foreach ($params as $index => $value) {
                 $ps[$index] = $value;
@@ -414,18 +453,25 @@ class Container extends Component
         $dependencies = [];
         $reflection = new ReflectionClass($class);
 
+        // 获取类的构造方法
         $constructor = $reflection->getConstructor();
         if ($constructor !== null) {
+            // 获取构造方法的参数，并将其实例化
             foreach ($constructor->getParameters() as $param) {
                 if ($param->isDefaultValueAvailable()) {
+                    // 如果有defalut值，就直接将默认值放入依赖中
                     $dependencies[] = $param->getDefaultValue();
                 } else {
+                    // 否则，就先获取param的ReflectionClass
                     $c = $param->getClass();
+                    // 然后通过getName获取类的名称（带namespace），生成一个Instance的实例
+                    // Instance中有个id属性，标记了类的名称
                     $dependencies[] = Instance::of($c === null ? null : $c->getName());
                 }
             }
         }
 
+        // 将类的反射实例和参数依赖的实例分别缓存到_reflections和_dependencies数组中
         $this->_reflections[$class] = $reflection;
         $this->_dependencies[$class] = $dependencies;
 
@@ -434,6 +480,7 @@ class Container extends Component
 
     /**
      * Resolves dependencies by replacing them with the actual object instances.
+     * 将Instance的实例替换成参数本身应该的实例
      * @param array $dependencies the dependencies
      * @param ReflectionClass $reflection the class reflection associated with the dependencies
      * @return array the resolved dependencies
@@ -442,10 +489,13 @@ class Container extends Component
     protected function resolveDependencies($dependencies, $reflection = null)
     {
         foreach ($dependencies as $index => $dependency) {
+            // 依赖是Instance的实例，才做处理
             if ($dependency instanceof Instance) {
                 if ($dependency->id !== null) {
+                    // id不为空，就使用get方法去获取它的实例
                     $dependencies[$index] = $this->get($dependency->id);
                 } elseif ($reflection !== null) {
+                    // 找出缺少的参数名称，以及其所在的类名
                     $name = $reflection->getConstructor()->getParameters()[$index]->getName();
                     $class = $reflection->getName();
                     throw new InvalidConfigException("Missing required parameter \"$name\" when instantiating \"$class\".");

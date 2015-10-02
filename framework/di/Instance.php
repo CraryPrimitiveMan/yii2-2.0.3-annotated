@@ -54,6 +54,7 @@ class Instance
 {
     /**
      * @var string the component ID, class name, interface name or alias name
+     * 组件ID，类名，接口名或者alias名
      */
     public $id;
 
@@ -74,6 +75,7 @@ class Instance
      */
     public static function of($id)
     {
+        // 使用id创建一个自身的实例
         return new static($id);
     }
 
