@@ -80,6 +80,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
     private $_validators;
     /**
      * @var string current scenario
+     * 当前的场景，默认是default
      */
     private $_scenario = self::SCENARIO_DEFAULT;
 
@@ -180,8 +181,10 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function scenarios()
     {
+        // 默认还有default的场景
         $scenarios = [self::SCENARIO_DEFAULT => []];
         foreach ($this->getValidators() as $validator) {
+            // 循环validator，取出所有提到的场景，包括on和except
             foreach ($validator->on as $scenario) {
                 $scenarios[$scenario] = [];
             }
@@ -189,25 +192,32 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
                 $scenarios[$scenario] = [];
             }
         }
+        // 取出所有场景的名称
         $names = array_keys($scenarios);
 
         foreach ($this->getValidators() as $validator) {
             if (empty($validator->on) && empty($validator->except)) {
+                // 如果validator即没有定义on，也没有定义except，就放到所有的场景中
                 foreach ($names as $name) {
                     foreach ($validator->attributes as $attribute) {
                         $scenarios[$name][$attribute] = true;
                     }
                 }
             } elseif (empty($validator->on)) {
+                // 如果没有定义on
                 foreach ($names as $name) {
+                    // 而且场景不在except中
                     if (!in_array($name, $validator->except, true)) {
+                        // 就将这个attribute加入到相应的场景中
                         foreach ($validator->attributes as $attribute) {
                             $scenarios[$name][$attribute] = true;
                         }
                     }
                 }
             } else {
+                // 如果定义了on
                 foreach ($validator->on as $name) {
+                    // 就将这个attribute加入到on定义的场景中
                     foreach ($validator->attributes as $attribute) {
                         $scenarios[$name][$attribute] = true;
                     }
@@ -216,9 +226,11 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
         }
 
         foreach ($scenarios as $scenario => $attributes) {
+            // 去除掉没有属性值的场景
             if (empty($attributes) && $scenario !== self::SCENARIO_DEFAULT) {
                 unset($scenarios[$scenario]);
             } else {
+                // 取出场景中的属性名称
                 $scenarios[$scenario] = array_keys($attributes);
             }
         }
@@ -241,8 +253,9 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function formName()
     {
+        // ReflectionClass 类包含了一个类的有关信息
         $reflector = new ReflectionClass($this);
-
+        // 获取类的短名，就是不含命名空间（namespace）的那一部分
         return $reflector->getShortName();
     }
 
@@ -256,7 +269,13 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
     {
         $class = new ReflectionClass($this);
         $names = [];
+        // ReflectionClass::getProperties — 获取一组属性
+        // ReflectionProperty::IS_STATIC 指示了 static 的属性。
+        // ReflectionProperty::IS_PUBLIC 指示了 public 的属性。
+        // ReflectionProperty::IS_PROTECTED 指示了 protected 的属性。
+        // ReflectionProperty::IS_PRIVATE 指示了 private 的属性。
         foreach ($class->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+            // 如果是public的属性，并且不是static的，就认为是它的attribute
             if (!$property->isStatic()) {
                 $names[] = $property->getName();
             }
@@ -586,7 +605,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
     {
         foreach ($items as $attribute => $errors) {
             if (is_array($errors)) {
-                foreach($errors as $error) {
+                foreach ($errors as $error) {
                     $this->addError($attribute, $error);
                 }
             } else {
@@ -655,12 +674,18 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function setAttributes($values, $safeOnly = true)
     {
+        // 必须是个数组
         if (is_array($values)) {
+            // array_flip — 交换数组中的键和值
+            // 将属性放到了key上
+            // 默认取safeAttributes中的属性
             $attributes = array_flip($safeOnly ? $this->safeAttributes() : $this->attributes());
             foreach ($values as $name => $value) {
                 if (isset($attributes[$name])) {
+                    // 如果存在该属性，就直接赋值
                     $this->$name = $value;
                 } elseif ($safeOnly) {
+                    // 如果不存在，而且是safeOnly的话，就触发一下onUnsafeAttribute方法
                     $this->onUnsafeAttribute($name, $value);
                 }
             }
@@ -677,6 +702,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
     public function onUnsafeAttribute($name, $value)
     {
         if (YII_DEBUG) {
+            // 如果是调试状态，就打log记录下，没有成功设置的不安全的属性
             Yii::trace("Failed to set unsafe attribute '$name' in '" . get_class($this) . "'.", __METHOD__);
         }
     }
@@ -691,6 +717,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function getScenario()
     {
+        // 获取当前的场景
         return $this->_scenario;
     }
 
@@ -702,6 +729,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function setScenario($value)
     {
+        // 设置当前的场景
         $this->_scenario = $value;
     }
 
@@ -711,13 +739,17 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function safeAttributes()
     {
+        // 获取当前的场景
         $scenario = $this->getScenario();
+        // 获取所有场景及其属性
         $scenarios = $this->scenarios();
         if (!isset($scenarios[$scenario])) {
+            // 场景不存在，就返回空
             return [];
         }
         $attributes = [];
         foreach ($scenarios[$scenario] as $attribute) {
+            // 将开头不是！的属性才会放入到safeAttributes中
             if ($attribute[0] !== '!') {
                 $attributes[] = $attribute;
             }
@@ -732,13 +764,17 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function activeAttributes()
     {
+        // 同上
         $scenario = $this->getScenario();
         $scenarios = $this->scenarios();
         if (!isset($scenarios[$scenario])) {
             return [];
         }
+        // 获取当前场景中的所有属性
         $attributes = $scenarios[$scenario];
         foreach ($attributes as $i => $attribute) {
+            // 如果属性名以！开头，就把！截取掉
+            // ！开头的属性来自rules，加！能够使规则（即validator）生效，但却能够不出现在safeAttributes中
             if ($attribute[0] === '!') {
                 $attributes[$i] = substr($attribute, 1);
             }
@@ -752,6 +788,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      * The data to be loaded is `$data[formName]`, where `formName` refers to the value of [[formName()]].
      * If [[formName()]] is empty, the whole `$data` array will be used to populate the model.
      * The data being populated is subject to the safety check by [[setAttributes()]].
+     * 加载数据到所在的model中
      * @param array $data the data array. This is usually `$_POST` or `$_GET`, but can also be any valid array
      * supplied by end user.
      * @param string $formName the form name to be used for loading the data into the model.
@@ -760,8 +797,10 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function load($data, $formName = null)
     {
+        // 如果存在yii的form，就使用该form，否则就拿到所在类的名称（不含namespace）
         $scope = $formName === null ? $this->formName() : $formName;
         if ($scope === '' && !empty($data)) {
+            //
             $this->setAttributes($data);
 
             return true;

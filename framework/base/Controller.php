@@ -76,6 +76,7 @@ class Controller extends Component implements ViewContextInterface
      */
     public function __construct($id, $module, $config = [])
     {
+        // 传入controller的id和所在的module的实例
         $this->id = $id;
         $this->module = $module;
         parent::__construct($config);
@@ -117,6 +118,7 @@ class Controller extends Component implements ViewContextInterface
      */
     public function runAction($id, $params = [])
     {
+        // 创建action的实例
         $action = $this->createAction($id);
         if ($action === null) {
             throw new InvalidRouteException('Unable to resolve the request: ' . $this->getUniqueId() . '/' . $id);
@@ -125,6 +127,7 @@ class Controller extends Component implements ViewContextInterface
         Yii::trace("Route to run: " . $action->getUniqueId(), __METHOD__);
 
         if (Yii::$app->requestedAction === null) {
+            // 记录当前的action为requestedAction
             Yii::$app->requestedAction = $action;
         }
 
@@ -135,10 +138,13 @@ class Controller extends Component implements ViewContextInterface
         $runAction = true;
 
         // call beforeAction on modules
+        // 从外到里一层层执行module的beforeAction
         foreach ($this->getModules() as $module) {
             if ($module->beforeAction($action)) {
+                // 将执行成功的module放入到$modules中，顺序会颠倒
                 array_unshift($modules, $module);
             } else {
+                // 执行失败，就标记一下，并跳出循环
                 $runAction = false;
                 break;
             }
@@ -146,13 +152,17 @@ class Controller extends Component implements ViewContextInterface
 
         $result = null;
 
+        // modules的beforeAction执行成功而且controller本身的beforeAction也执行成功
         if ($runAction && $this->beforeAction($action)) {
             // run the action
+            // 执行action
             $result = $action->runWithParams($params);
 
+            // 执行controller本身的afterAction
             $result = $this->afterAction($action, $result);
 
             // call afterAction on modules
+            // 从里到外一层层执行所有modules的beforeAction
             foreach ($modules as $module) {
                 /* @var $module Module */
                 $result = $module->afterAction($action, $result);
@@ -211,17 +221,25 @@ class Controller extends Component implements ViewContextInterface
     public function createAction($id)
     {
         if ($id === '') {
+            // 如果action的id为空，就是用默认的action
             $id = $this->defaultAction;
         }
 
+        // 获取actions方法中的定义的actionMap
         $actionMap = $this->actions();
         if (isset($actionMap[$id])) {
+            // 如果action的id在actionMap中，就去创建这个action
             return Yii::createObject($actionMap[$id], [$id, $this]);
         } elseif (preg_match('/^[a-z0-9\\-_]+$/', $id) && strpos($id, '--') === false && trim($id, '-') === $id) {
+            // 如果id符合命名规范，并且不存在--，而且两边不存在-
+            // 必须是数字/小写字母/右斜线/中划线/下划线组成的的
+            // 用与拼接controller类名类似的方法拼接action方法的名称
             $methodName = 'action' . str_replace(' ', '', ucwords(implode(' ', explode('-', $id))));
             if (method_exists($this, $methodName)) {
+                // 如果方法存在，就new一个ReflectionMethod实例
                 $method = new \ReflectionMethod($this, $methodName);
                 if ($method->isPublic() && $method->getName() === $methodName) {
+                    // 如果方法是public的，就new一个InlineAction返回
                     return new InlineAction($id, $this, $methodName);
                 }
             }
@@ -297,9 +315,13 @@ class Controller extends Component implements ViewContextInterface
      */
     public function getModules()
     {
+        // 用当前controller的module组成modules的数组
         $modules = [$this->module];
         $module = $this->module;
+        // 遍历module的module，直到为空
         while ($module->module !== null) {
+            // array_unshift — 在数组开头插入一个或多个单元
+            // 将外面的module插入到modules数组的开头
             array_unshift($modules, $module->module);
             $module = $module->module;
         }

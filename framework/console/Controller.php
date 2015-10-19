@@ -77,10 +77,13 @@ class Controller extends \yii\base\Controller
     {
         if (!empty($params)) {
             // populate options here so that they are available in beforeAction().
+            // 获取允许的参数，可以在beforeAction中拿到
             $options = $this->options($id);
             foreach ($params as $name => $value) {
                 if (in_array($name, $options, true)) {
+                    // 如果参数在允许的options，才会将值赋给controller的属性
                     $default = $this->$name;
+                    // 如果该属性的默认值是数组，就根据逗号和空格(包含" ", \r, \t, \n, \f)的组合分隔value值
                     $this->$name = is_array($default) ? preg_split('/\s*,\s*/', $value) : $value;
                     unset($params[$name]);
                 } elseif (!is_int($name)) {
@@ -104,16 +107,20 @@ class Controller extends \yii\base\Controller
     public function bindActionParams($action, $params)
     {
         if ($action instanceof InlineAction) {
+            // 如果action是InlineAction的实例，就new一个controller上actionMethod的ReflectionMethod实例
             $method = new \ReflectionMethod($this, $action->actionMethod);
         } else {
+            // 否则，就new一个action上run方法的ReflectionMethod实例
             $method = new \ReflectionMethod($action, 'run');
         }
 
+        // 取参数的值
         $args = array_values($params);
 
         $missing = [];
         foreach ($method->getParameters() as $i => $param) {
             if ($param->isArray() && isset($args[$i])) {
+                // $param是数组，并且存在$args[$i]，就将$args[$i]分割成数组
                 $args[$i] = preg_split('/\s*,\s*/', $args[$i]);
             }
             if (!isset($args[$i])) {

@@ -114,7 +114,7 @@ class UrlManager extends Component
      * @var boolean whether to show entry script name in the constructed URL. Defaults to true.
      * This property is used only if [[enablePrettyUrl]] is true.
      *
-     * 是否展示 index.php
+     * 是否展示入口脚本 index.php
      */
     public $showScriptName = true;
     /**

@@ -573,6 +573,7 @@ class BaseYii
      */
     public static function getObjectVars($object)
     {
+        // get_object_vars — 返回由对象属性组成的关联数组
         return get_object_vars($object);
     }
 }

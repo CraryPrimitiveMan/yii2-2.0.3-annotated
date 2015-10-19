@@ -55,6 +55,7 @@ class Action extends Component
      */
     public function __construct($id, $controller, $config = [])
     {
+        // 传入action的id和所属controller的实例
         $this->id = $id;
         $this->controller = $controller;
         parent::__construct($config);

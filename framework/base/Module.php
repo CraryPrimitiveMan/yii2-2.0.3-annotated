@@ -451,13 +451,17 @@ class Module extends ServiceLocator
      */
     public function runAction($route, $params = [])
     {
+        // 创建controller，获取controller的实例和action的ID
         $parts = $this->createController($route);
         if (is_array($parts)) {
             /* @var $controller Controller */
             list($controller, $actionID) = $parts;
+            // 保留下app中绑定的controller
             $oldController = Yii::$app->controller;
+            // 将当前controller绑定到app上
             Yii::$app->controller = $controller;
             $result = $controller->runAction($actionID, $params);
+            // 还原会app之前的绑定的controller
             Yii::$app->controller = $oldController;
 
             return $result;
@@ -496,35 +500,48 @@ class Module extends ServiceLocator
         }
 
         // double slashes or leading/ending slashes may cause substr problem
+        // 如果有双斜线或者结束的斜线，可能会引起问题
         $route = trim($route, '/');
         if (strpos($route, '//') !== false) {
             return false;
         }
 
         if (strpos($route, '/') !== false) {
+            // 如果存在斜线，就根据斜线分割route，并限制最多分割成两个
             list ($id, $route) = explode('/', $route, 2);
         } else {
+            // 不存在，就直接赋值给$id
             $id = $route;
             $route = '';
         }
 
         // module and controller map take precedence
         if (isset($this->controllerMap[$id])) {
+            // 如果controllerMap中存在相应的$id，就使用Yii::createObject去创建该controller的实例
             $controller = Yii::createObject($this->controllerMap[$id], [$id, $this]);
             return [$controller, $route];
         }
+        // 根据id获取module
         $module = $this->getModule($id);
         if ($module !== null) {
+            // 获取到module，就递归调用相应module的createController去创建controller的实例
             return $module->createController($route);
         }
 
+        // 如果取到了module，就需要继续去取controller的ID
+        // 再次根据斜线分割
         if (($pos = strrpos($route, '/')) !== false) {
+            // 如果有斜线，就将module的ID和后面截取出的内容一起拼成ID
             $id .= '/' . substr($route, 0, $pos);
+            // 剩余的赋给route
             $route = substr($route, $pos + 1);
         }
 
+        // 然后根据ID去创建controller的实例
         $controller = $this->createControllerByID($id);
+        // 未创建成功，并且route不为空
         if ($controller === null && $route !== '') {
+            // 将route拼接到ID中，再次去创建controller出的实例
             $controller = $this->createControllerByID($id . '/' . $route);
             $route = '';
         }
@@ -547,28 +564,41 @@ class Module extends ServiceLocator
      */
     public function createControllerByID($id)
     {
+        // $id是controller的ID，但它前面可能带有module的ID，而且可能是多层module ID
+        // 取到最右边的斜线位置，可以分离出controller的名字
         $pos = strrpos($id, '/');
         if ($pos === false) {
+            // 没有斜线，$id就是controller的名字
             $prefix = '';
             $className = $id;
         } else {
+            // 有斜线，斜线前的是module的ID，斜线后是controller的名字
             $prefix = substr($id, 0, $pos + 1);
             $className = substr($id, $pos + 1);
         }
 
         if (!preg_match('%^[a-z][a-z0-9\\-_]*$%', $className)) {
+            // 如果controller的名字不符合命名的规范，就返回null
+            // 以小写字母开头，可以包含数字/小写字母/右斜线/中划线/下划线
             return null;
         }
         if ($prefix !== '' && !preg_match('%^[a-z0-9_/]+$%i', $prefix)) {
+            // 如果module的ID不符合module的命名规范，就返回null
+            // 可以包含数字/小写字母/左斜线/下划线
             return null;
         }
 
+        // 先将-替换为空格，再将每个单词的首字母大写，再将空格替换为空字符串，最后拼接上'Controller'，就拿到了类名（不带namespace）
         $className = str_replace(' ', '', ucwords(str_replace('-', ' ', $className))) . 'Controller';
+        // 根据application和module中定义的controllerNamespace，拼出controller的类名，含namespace
         $className = ltrim($this->controllerNamespace . '\\' . str_replace('/', '\\', $prefix)  . $className, '\\');
         if (strpos($className, '-') !== false || !class_exists($className)) {
+            // 如果存在中划线或者类不存在，即返回null
             return null;
         }
 
+        // is_subclass_of — 如果此对象是该类的子类，则返回 TRUE
+        // 判断是不是'yii\base\Controller'的子类，是的话，就创建相应类的实例
         if (is_subclass_of($className, 'yii\base\Controller')) {
             return Yii::createObject($className, [$id, $this]);
         } elseif (YII_DEBUG) {

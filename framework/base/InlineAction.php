@@ -34,6 +34,7 @@ class InlineAction extends Action
      */
     public function __construct($id, $controller, $actionMethod, $config = [])
     {
+        // 传入action的id，controller的实例，action方法的名称以及action的配置
         $this->actionMethod = $actionMethod;
         parent::__construct($id, $controller, $config);
     }
@@ -46,12 +47,15 @@ class InlineAction extends Action
      */
     public function runWithParams($params)
     {
+        // 获取action的参数，通过合并出入的参数和默认参数得出
         $args = $this->controller->bindActionParams($this, $params);
         Yii::trace('Running action: ' . get_class($this->controller) . '::' . $this->actionMethod . '()', __METHOD__);
         if (Yii::$app->requestedParams === null) {
+            // 记录请求的参数
             Yii::$app->requestedParams = $args;
         }
 
+        // 执行controller的这个action方法
         return call_user_func_array([$this->controller, $this->actionMethod], $args);
     }
 }

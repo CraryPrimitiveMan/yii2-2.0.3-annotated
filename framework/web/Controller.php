@@ -61,17 +61,22 @@ class Controller extends \yii\base\Controller
     public function bindActionParams($action, $params)
     {
         if ($action instanceof InlineAction) {
+            // 如果action是InlineAction的实例，就new一个controller上actionMethod的ReflectionMethod实例
             $method = new \ReflectionMethod($this, $action->actionMethod);
         } else {
+            // 否则，就new一个action上run方法的ReflectionMethod实例
             $method = new \ReflectionMethod($action, 'run');
         }
 
         $args = [];
         $missing = [];
         $actionParams = [];
+        // ReflectionFunctionAbstract::getParameters — 获取参数
         foreach ($method->getParameters() as $param) {
+            // ReflectionParameter::getName — Gets parameter name
             $name = $param->getName();
             if (array_key_exists($name, $params)) {
+                // ReflectionParameter::isArray — Checks if parameter expects an array
                 if ($param->isArray()) {
                     $args[] = $actionParams[$name] = (array)$params[$name];
                 } elseif (!is_array($params[$name])) {
@@ -83,6 +88,8 @@ class Controller extends \yii\base\Controller
                 }
                 unset($params[$name]);
             } elseif ($param->isDefaultValueAvailable()) {
+                // ReflectionParameter::isDefaultValueAvailable — Checks if a default value is available
+                // ReflectionParameter::getDefaultValue — Gets default parameter value
                 $args[] = $actionParams[$name] = $param->getDefaultValue();
             } else {
                 $missing[] = $name;

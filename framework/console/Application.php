@@ -90,11 +90,15 @@ class Application extends \yii\base\Application
     protected function loadConfig($config)
     {
         if (!empty($_SERVER['argv'])) {
+            // $option是--appconfig=
             $option = '--' . self::OPTION_APPCONFIG . '=';
             foreach ($_SERVER['argv'] as $param) {
+                // 以--appconfig=开头的
                 if (strpos($param, $option) !== false) {
+                    // 截取出相应的值
                     $path = substr($param, strlen($option));
                     if (!empty($path) && is_file($file = Yii::getAlias($path))) {
+                        // 将值对应的文件require进来
                         return require($file);
                     } else {
                         die("The configuration file does not exist: $path\n");
@@ -112,8 +116,10 @@ class Application extends \yii\base\Application
     public function init()
     {
         parent::init();
+        // 如果启用核心命令（默认启用）
         if ($this->enableCoreCommands) {
             foreach ($this->coreCommands() as $id => $command) {
+                // 如果controllerMap中有相应的controller，就用当前的命令Controller替换掉
                 if (!isset($this->controllerMap[$id])) {
                     $this->controllerMap[$id] = $command;
                 }
@@ -133,12 +139,15 @@ class Application extends \yii\base\Application
     public function handleRequest($request)
     {
         list ($route, $params) = $request->resolve();
+        // 记录请求的路由
         $this->requestedRoute = $route;
+        // 返回正常是个int值
         $result = $this->runAction($route, $params);
         if ($result instanceof Response) {
             return $result;
         } else {
             $response = $this->getResponse();
+            // 设置为response的exitStatus
             $response->exitStatus = $result;
 
             return $response;
@@ -158,6 +167,7 @@ class Application extends \yii\base\Application
     public function runAction($route, $params = [])
     {
         try {
+            // 调用父类方法，返回的内容强转成int
             return (int)parent::runAction($route, $params);
         } catch (InvalidRouteException $e) {
             throw new Exception("Unknown command \"$route\".", 0, $e);
@@ -170,6 +180,7 @@ class Application extends \yii\base\Application
      */
     public function coreCommands()
     {
+        // 核心命令，及其对应的类
         return [
             'message' => 'yii\console\controllers\MessageController',
             'help' => 'yii\console\controllers\HelpController',
@@ -185,6 +196,7 @@ class Application extends \yii\base\Application
      */
     public function coreComponents()
     {
+        // 将console的Request/Response以及ErrorHandler合并到核心组件中
         return array_merge(parent::coreComponents(), [
             'request' => ['class' => 'yii\console\Request'],
             'response' => ['class' => 'yii\console\Response'],

@@ -21,6 +21,7 @@ interface UrlRuleInterface
      * @param Request $request the request component
      * @return array|boolean the parsing result. The route and the parameters are returned as an array.
      * If false, it means this rule cannot be used to parse this path info.
+     * 用于解析请求
      */
     public function parseRequest($manager, $request);
     /**
@@ -29,6 +30,7 @@ interface UrlRuleInterface
      * @param string $route the route. It should not have slashes at the beginning or the end.
      * @param array $params the parameters
      * @return string|boolean the created URL, or false if this rule cannot be used for creating this URL.
+     * 用于生成URL
      */
     public function createUrl($manager, $route, $params);
 }

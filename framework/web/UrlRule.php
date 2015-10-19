@@ -31,27 +31,35 @@ use yii\base\InvalidConfigException;
  */
 class UrlRule extends Object implements UrlRuleInterface
 {
+    // 用于 $mode 表示路由规则的2种工作模式：仅用于解析请求和仅用于生成URL。
+    // 任意不为1或2的值均表示两种模式同时适用，
+    // 一般未设定或为0时即表示两种模式均适用。
     /**
      * Set [[mode]] with this value to mark that this rule is for URL parsing only
+     * 仅用于解析请求的模式
      */
     const PARSING_ONLY = 1;
     /**
      * Set [[mode]] with this value to mark that this rule is for URL creation only
+     * 仅用于生成URL的模式
      */
     const CREATION_ONLY = 2;
 
     /**
      * @var string the name of this rule. If not set, it will use [[pattern]] as the name.
+     * 路由规则名称
      */
     public $name;
     /**
      * @var string the pattern used to parse and create the path info part of a URL.
      * @see host
+     * 用于解析请求或生成URL的模式，通常是正则表达式
      */
     public $pattern;
     /**
      * @var string the pattern used to parse and create the host info part of a URL (e.g. `http://example.com`).
      * @see pattern
+     * 用于解析或创建URL时，处理主机信息的部分，如 http://example.com
      */
     public $host;
     /**
@@ -68,6 +76,7 @@ class UrlRule extends Object implements UrlRuleInterface
      * @var string the URL suffix used for this rule.
      * For example, ".html" can be used so that the URL looks like pointing to a static HTML page.
      * If not, the value of [[UrlManager::suffix]] will be used.
+     * url的后缀
      */
     public $suffix;
     /**
@@ -75,6 +84,7 @@ class UrlRule extends Object implements UrlRuleInterface
      * Use array to represent multiple verbs that this rule may match.
      * If this property is not set, the rule can match any verb.
      * Note that this property is only used when parsing a request. It is ignored for URL creation.
+     * HTTP方法， GET/POST/DELETE/...
      */
     public $verb;
     /**
@@ -83,6 +93,7 @@ class UrlRule extends Object implements UrlRuleInterface
      * If not set or 0, it means the rule is both request parsing and URL creation.
      * If it is [[PARSING_ONLY]], the rule is for request parsing only.
      * If it is [[CREATION_ONLY]], the rule is for URL creation only.
+     * 工作的模式
      */
     public $mode;
     /**
@@ -254,10 +265,12 @@ class UrlRule extends Object implements UrlRuleInterface
     public function parseRequest($manager, $request)
     {
         if ($this->mode === self::CREATION_ONLY) {
+            // 如果是只能用于创建URL的模式，返回false
             return false;
         }
 
         if (!empty($this->verb) && !in_array($request->getMethod(), $this->verb, true)) {
+            // 如果HTTP的方法不为空，并且该方法的名称不在request允许的方法内，就返回false
             return false;
         }
 

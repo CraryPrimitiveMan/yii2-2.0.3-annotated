@@ -132,12 +132,14 @@ class Component extends Object
         $getter = 'get' . $name;
         if (method_exists($this, $getter)) {
             // read property, e.g. getName()
+            // getter方法存在的话就直接调用方法
             return $this->$getter();
         } else {
             // behavior property
             $this->ensureBehaviors();
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canGetProperty($name)) {
+                    // 如果behavior中含有该属性，就返回
                     return $behavior->$name;
                 }
             }
@@ -230,12 +232,14 @@ class Component extends Object
     {
         $getter = 'get' . $name;
         if (method_exists($this, $getter)) {
+            // 如果getter方法存在，且不为null，就返回true
             return $this->$getter() !== null;
         } else {
             // behavior property
             $this->ensureBehaviors();
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canGetProperty($name)) {
+                    // 如果behavior的属性存在，且不为null，就返回true
                     return $behavior->$name !== null;
                 }
             }
