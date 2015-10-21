@@ -11,14 +11,19 @@
 defined('YII_DEBUG') or define('YII_DEBUG', true);
 
 // fcgi doesn't have STDIN and STDOUT defined by default
+// 定义 STDIN 和 STDOUT
 defined('STDIN') or define('STDIN', fopen('php://stdin', 'r'));
 defined('STDOUT') or define('STDOUT', fopen('php://stdout', 'w'));
 
 require(__DIR__ . '/vendor/autoload.php');
 require(__DIR__ . '/vendor/yiisoft/yii2/Yii.php');
 
+// 引入 console 的 config 文件，并将返回值即配置项放入 $config 变量中
 $config = require(__DIR__ . '/config/console.php');
 
+// new 一个 yii\console\Application 的实例，并执行它的 run 方法
+// 用 $config 作为 yii\console\Application 初始化的参数
 $application = new yii\console\Application($config);
 $exitCode = $application->run();
+// 退出
 exit($exitCode);
