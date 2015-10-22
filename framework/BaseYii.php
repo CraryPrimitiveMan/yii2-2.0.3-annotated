@@ -305,13 +305,14 @@ class BaseYii
         if (isset(static::$classMap[$className])) {
             // 如果 $classMap 中存在该类，就直接使用
             $classFile = static::$classMap[$className];
-            // 如果对应的文件地址是别名，就转化成真实的文件地址
+            // 如果第一个字符串为'@'，就意味着对应的文件地址是别名，就将它转化成真实的文件地址
             if ($classFile[0] === '@') {
                 $classFile = static::getAlias($classFile);
             }
         } elseif (strpos($className, '\\') !== false) {
-            // 如果含有 namespace,就拼成别名，再获取真实的文件地址
+            // 如果存在'\\',就意味着含有 namespace,可以拼成别名，再根据别名获取真实的文件地址
             $classFile = static::getAlias('@' . str_replace('\\', '/', $className) . '.php', false);
+            // 没取到真是文件地址或者获取的地址不是一个文件，就返回空
             if ($classFile === false || !is_file($classFile)) {
                 return;
             }
@@ -322,6 +323,7 @@ class BaseYii
         // 引入该类的文件
         include($classFile);
 
+        // 如果是调试模式，而且 $className 即不是类，不是接口，也不是 trait，就抛出异常
         if (YII_DEBUG && !class_exists($className, false) && !interface_exists($className, false) && !trait_exists($className, false)) {
             throw new UnknownClassException("Unable to find '$className' in file: $classFile. Namespace missing?");
         }
