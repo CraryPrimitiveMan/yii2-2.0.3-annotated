@@ -108,6 +108,7 @@ class BaseYii
 
     /**
      * Translates a path alias into an actual path.
+     * 将别名转化为真实的路径
      *
      * The translation is done according to the following procedure:
      *
@@ -148,14 +149,20 @@ class BaseYii
             return $alias;
         }
 
-        // 如果 $alias 中含有 /, 就截取 / 之前的字符作为 $root
+        // 获取 / 在 $alias 中首次出现的位置
         $pos = strpos($alias, '/');
+        // 如果 / 不存在，$root 就是整个 $alias，否则就是 $alias 中 / 前的内容
         $root = $pos === false ? $alias : substr($alias, 0, $pos);
 
+        // 如果存在 $root 的别名
         if (isset(static::$aliases[$root])) {
             if (is_string(static::$aliases[$root])) {
+                // 如果 $root 对应的别名是一个字符串，之直接返回 $aliases[$root] 或者 $aliases[$root] . substr($alias, $pos)
+                // 当 $root 就是 $alias 返回 $aliases[$root]， 否则就在拼接上 $alias 除去 $root 后，剩下的字符串
                 return $pos === false ? static::$aliases[$root] : static::$aliases[$root] . substr($alias, $pos);
             } else {
+                // 否则，要遍历整个 $aliases[$root] 数组，找到 $name 与 $alias 相同的值，返回 $path . substr($alias, strlen($name))
+                // 其实是返回了 $path 拼接上 $alias 除去 $root 后，剩下的字符串
                 foreach (static::$aliases[$root] as $name => $path) {
                     if (strpos($alias . '/', $name . '/') === 0) {
                         return $path . substr($alias, strlen($name));
@@ -180,13 +187,18 @@ class BaseYii
      */
     public static function getRootAlias($alias)
     {
+        // 获取 / 在 $alias 中首次出现的位置
         $pos = strpos($alias, '/');
+        // 如果 / 不存在，$root 就是整个 $alias，否则就是 $alias 中 / 前的内容
         $root = $pos === false ? $alias : substr($alias, 0, $pos);
 
         if (isset(static::$aliases[$root])) {
+            // 如果 $root 对应的别名存在
             if (is_string(static::$aliases[$root])) {
+                // 如果 $root 对应的别名是一个字符串，之直接返回 $root
                 return $root;
             } else {
+                // 否则，要遍历整个 $aliases[$root] 数组，找到 $name 与 $alias 相同的值，返回 $name
                 foreach (static::$aliases[$root] as $name => $path) {
                     if (strpos($alias . '/', $name . '/') === 0) {
                         return $name;
@@ -200,6 +212,8 @@ class BaseYii
 
     /**
      * Registers a path alias.
+     *
+     * 用一个真实的路径注册一个别名
      *
      * A path alias is a short name representing a long path (a file path, a URL, etc.)
      * For example, we use '@yii' as the alias of the path to the Yii framework directory.
@@ -229,29 +243,29 @@ class BaseYii
     public static function setAlias($alias, $path)
     {
         if (strncmp($alias, '@', 1)) {
-            // 如果不是以@开头，就将@拼进去
+            // 如果不是以 @ 开头，就将 @ 拼到开头
             $alias = '@' . $alias;
         }
-        // 获取/在$alias中首次出现的位置
+        // 获取 / 在 $alias 中首次出现的位置
         $pos = strpos($alias, '/');
-        // 如果存在，$root就是$alias中/前的内容，否则就是整个$alias
+        // 如果 / 不存在，$root 就是整个 $alias，否则就是 $alias 中 / 前的内容
         $root = $pos === false ? $alias : substr($alias, 0, $pos);
         if ($path !== null) {
-            // 如果$path以@开头，使用getAlias去获取路径，否则，就去除掉最右边的/
+            // 如果 $path 以 @ 开头，使用 getAlias 去获取路径，否则，就去除掉最右边的 /
             $path = strncmp($path, '@', 1) ? rtrim($path, '\\/') : static::getAlias($path);
             if (!isset(static::$aliases[$root])) {
-                // 如果不存在这个$root的$aliase
+                // 如果不存在这个 $root 的别名
                 if ($pos === false) {
-                    // 没有/，就将$path直接赋值为$root的路径
+                    // 没有 /，就将 $path 直接赋值以为 $root 别名对应的路径
                     static::$aliases[$root] = $path;
                 } else {
-                    // 否则，就将$path直接赋值为$root下的$alias的路径
+                    // 否则，就将 $path 直接赋值为 $root 下的 $alias 的路径
                     static::$aliases[$root] = [$alias => $path];
                 }
             } elseif (is_string(static::$aliases[$root])) {
                 // 如果存在，而且是个string类型
                 if ($pos === false) {
-                    // 没有/，就直接覆盖
+                    // 没有 /，意味着 $alias 就是 $root，直接覆盖即可
                     static::$aliases[$root] = $path;
                 } else {
                     // 否则，就合并到一起
@@ -261,17 +275,20 @@ class BaseYii
                     ];
                 }
             } else {
-                // 这种，正常是个array
-                // 直接添加进去
+                // 这种，正常是个 array 类型
+                // 直接添加进去即可
                 static::$aliases[$root][$alias] = $path;
                 // krsort — 对数组按照键名逆向排序
+                // 可以做到优先匹配长的别名
                 krsort(static::$aliases[$root]);
             }
         } elseif (isset(static::$aliases[$root])) {
-            // $path为空，就是要移除相应的$aliase
+            // $path 为空且对应的别名有值存在，就是要移除相应的别名
             if (is_array(static::$aliases[$root])) {
+                // 如果 $root 的别名对应一个 array，就只移除掉对应的别名即可
                 unset(static::$aliases[$root][$alias]);
             } elseif ($pos === false) {
+                // 如果 $root 的别名对应不是一个 array 而且 $root 就是 $alias，就移除这个 $root 的别名
                 unset(static::$aliases[$root]);
             }
         }
