@@ -98,12 +98,12 @@ use Yii;
 class Component extends Object
 {
     /**
-     * 用来存储该对象的event
+     * 用来存储该对象的 event
      * @var array the attached event handlers (event name => handlers)
      */
     private $_events = [];
     /**
-     * 用来存储该对象的behavior
+     * 用来存储该对象的 behavior
      * @var Behavior[]|null the attached behaviors (behavior name => behavior). This is `null` when not initialized.
      */
     private $_behaviors;
@@ -119,7 +119,7 @@ class Component extends Object
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$value = $component->property;`.
      *
-     * 重写Object中的getter方法，添加对behaviors的处理，循环behaviors，如果其中有相应的方法，就执行它
+     * 重写 Object 中的 getter 方法，添加对 behaviors 的处理，循环 behaviors，如果其中有相应的方法，就执行它
      *
      * @param string $name the property name
      * @return mixed the property value or the value of a behavior's property
@@ -132,14 +132,14 @@ class Component extends Object
         $getter = 'get' . $name;
         if (method_exists($this, $getter)) {
             // read property, e.g. getName()
-            // getter方法存在的话就直接调用方法
+            // $getter 方法存在的话就直接调用方法
             return $this->$getter();
         } else {
             // behavior property
             $this->ensureBehaviors();
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canGetProperty($name)) {
-                    // 如果behavior中含有该属性，就返回
+                    // 如果 behavior 中含有该属性，就返回 behavior 中的这个属性
                     return $behavior->$name;
                 }
             }
@@ -163,10 +163,10 @@ class Component extends Object
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$component->property = $value;`.
      *
-     * 重写Object中的setter方法
-     * 如果$name是'on xyz'，就会将xyz事件添加到该对象中
-     * 如果$name是'as xyz'，就会将xyz行为添加到该对象中
-     * 添加对behaviors的处理，循环behaviors，如果其中有相应的属性，就设置它
+     * 重写 Object 中的 setter 方法
+     * 如果 $name 是 'on xyz'，就会将 xyz 事件添加到该对象中
+     * 如果 $name 是 'as xyz'，就会将 xyz 行为添加到该对象中
+     * 添加对 behaviors 的处理，循环 behaviors，如果其中有相应的属性，就设置它
      *
      * @param string $name the property name or the event name
      * @param mixed $value the property value
@@ -179,27 +179,31 @@ class Component extends Object
         $setter = 'set' . $name;
         if (method_exists($this, $setter)) {
             // set property
+            // 存在 $setter 方法，其优先级最高
             $this->$setter($value);
 
             return;
         } elseif (strncmp($name, 'on ', 3) === 0) {
-            // 添加事件
+            // 如果 $name 是以 'on ' 开头的，就添加事件
             // on event: attach event handler
             $this->on(trim(substr($name, 3)), $value);
 
             return;
         } elseif (strncmp($name, 'as ', 3) === 0) {
-            // 添加行为
+            // 如果 $name 是以 'as ' 开头的，添加行为
             // as behavior: attach behavior
             $name = trim(substr($name, 3));
+            // $value 是一个 behavior 的实例或者 behavior 的配置
             $this->attachBehavior($name, $value instanceof Behavior ? $value : Yii::createObject($value));
 
             return;
         } else {
             // behavior property
             $this->ensureBehaviors();
+            // 循环所有的 behavior
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canSetProperty($name)) {
+                    // 如果 behavior 中有 $name 属性，就将 $value 赋给它
                     $behavior->$name = $value;
 
                     return;
@@ -223,7 +227,7 @@ class Component extends Object
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `isset($component->property)`.
      *
-     * 重写Object中的isset方法，添加对behaviors的处理，循环behaviors，如果其中有相应的属性，就认为有
+     * 重写 Object 中的 isset 方法，添加对 behaviors 的处理，循环 behaviors，如果其中有相应的属性，就认为有
      *
      * @param string $name the property name or the event name
      * @return boolean whether the named property is null
@@ -232,14 +236,15 @@ class Component extends Object
     {
         $getter = 'get' . $name;
         if (method_exists($this, $getter)) {
-            // 如果getter方法存在，且不为null，就返回true
+            // 如果 $getter 方法存在，且不为 null，就返回 true
             return $this->$getter() !== null;
         } else {
             // behavior property
             $this->ensureBehaviors();
+            // 循环所有的 behavior
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canGetProperty($name)) {
-                    // 如果behavior的属性存在，且不为null，就返回true
+                    // 如果 behavior 中有 $name 属性，且不为 null，就返回 true
                     return $behavior->$name !== null;
                 }
             }
@@ -257,7 +262,7 @@ class Component extends Object
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `unset($component->property)`.
      *
-     * 重写Object中的unset方法，添加对behaviors的处理，循环behaviors，如果其中有相应的属性，设置为空
+     * 重写 Object 中的 unset 方法，添加对 behaviors 的处理，循环 behaviors，如果其中有相应的属性，设置为空
      *
      * @param string $name the property name
      * @throws InvalidCallException if the property is read only.
@@ -266,13 +271,16 @@ class Component extends Object
     {
         $setter = 'set' . $name;
         if (method_exists($this, $setter)) {
+            // 如果 $setter 方法存在，且不为 null，就返回 true
             $this->$setter(null);
             return;
         } else {
             // behavior property
             $this->ensureBehaviors();
+            // 循环所有的 behavior
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canSetProperty($name)) {
+                    // 如果 behavior 中有 $name 属性，就将该属性设为 null
                     $behavior->$name = null;
                     return;
                 }
@@ -290,7 +298,7 @@ class Component extends Object
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when an unknown method is being invoked.
      *
-     * 重写Object中的call方法，添加对behaviors的处理，循环behaviors，如果其中有相应方法，就执行该behavior的方法
+     * 重写 Object 中的 call 方法，添加对 behaviors 的处理，循环 behaviors，如果其中有相应方法，就执行该 behavior 的方法
      *
      * @param string $name the method name
      * @param array $params method parameters
@@ -302,6 +310,8 @@ class Component extends Object
         $this->ensureBehaviors();
         foreach ($this->_behaviors as $object) {
             if ($object->hasMethod($name)) {
+                // behavior 中存在名为 $name 的方法，就执行它
+                // call_user_func_array — 调用回调函数，并把一个数组参数作为回调函数的参数
                 return call_user_func_array([$object, $name], $params);
             }
         }
@@ -312,10 +322,16 @@ class Component extends Object
      * This method is called after the object is created by cloning an existing one.
      * It removes all behaviors because they are attached to the old object.
      *
-     * 执行clone时，将其_events和_behaviors设置为空
+     * 执行 clone 时，将其 _events 和 _behaviors 设置为空
+     * 对象复制可以通过 clone 关键字来完成（如果可能，这将调用对象的 __clone() 方法）。对象中的 __clone() 方法不能被直接调用。
+     * ~~~
+     * $copy_of_object = clone $object;
+     * ~~~
+     * 当对象被复制后，PHP 5 会对对象的所有属性执行一个浅复制（shallow copy）。所有的引用属性 仍然会是一个指向原来的变量的引用。
      */
     public function __clone()
     {
+        // 对象复制时，将它的 _events 设置为空数组，将 _behaviors 设置为 null
         $this->_events = [];
         $this->_behaviors = null;
     }
@@ -329,7 +345,7 @@ class Component extends Object
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      * - an attached behavior has a property of the given name (when `$checkBehaviors` is true).
      *
-     * 与Object中的方法类似，只是添加了是否检测behavior的参数
+     * 与 Object 中的方法类似，只是添加了是否检测 behavior 的参数
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -340,6 +356,8 @@ class Component extends Object
      */
     public function hasProperty($name, $checkVars = true, $checkBehaviors = true)
     {
+        // $checkVars 标记是否 check 对象的是否具有该属性（不是 getter 和 setter 定义出的属性）
+        // $checkBehaviors 标记是否 check behavior 中的属性
         return $this->canGetProperty($name, $checkVars, $checkBehaviors) || $this->canSetProperty($name, false, $checkBehaviors);
     }
 
@@ -351,6 +369,8 @@ class Component extends Object
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      * - an attached behavior has a readable property of the given name (when `$checkBehaviors` is true).
+     *
+     * 检查对象或类是否能够获取 $name 属性
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -366,6 +386,7 @@ class Component extends Object
             $this->ensureBehaviors();
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canGetProperty($name, $checkVars)) {
+                    // behavior 中存在名为 $name 的可读属性，就认为该对象也存在
                     return true;
                 }
             }
@@ -382,6 +403,8 @@ class Component extends Object
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      * - an attached behavior has a writable property of the given name (when `$checkBehaviors` is true).
      *
+     * 检查对象或类是否能够设置 $name 属性
+     *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
      * @param boolean $checkBehaviors whether to treat behaviors' properties as properties of this component
@@ -396,6 +419,7 @@ class Component extends Object
             $this->ensureBehaviors();
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->canSetProperty($name, $checkVars)) {
+                    // behavior 中存在名为 $name 的可写属性，就认为该对象也存在
                     return true;
                 }
             }
@@ -410,6 +434,8 @@ class Component extends Object
      * - the class has a method with the specified name
      * - an attached behavior has a method with the given name (when `$checkBehaviors` is true).
      *
+     * 检查对象或类是否具有 $name 方法, $checkBehaviors 标记是否 check behavior 中的方法
+     *
      * @param string $name the property name
      * @param boolean $checkBehaviors whether to treat behaviors' methods as methods of this component
      * @return boolean whether the property is defined
@@ -422,6 +448,7 @@ class Component extends Object
             $this->ensureBehaviors();
             foreach ($this->_behaviors as $behavior) {
                 if ($behavior->hasMethod($name)) {
+                    // behavior 中存在名为 $name 的方法，就认为该对象也存在
                     return true;
                 }
             }
@@ -453,6 +480,8 @@ class Component extends Object
      *
      * Behaviors declared in this method will be attached to the component automatically (on demand).
      *
+     * 定义该对象中要用到的 behavior，格式如上
+     *
      * @return array the behavior configurations.
      */
     public function behaviors()
@@ -463,7 +492,7 @@ class Component extends Object
     /**
      * Returns a value indicating whether there is any handler attached to the named event.
      *
-     * 判断_events中的一个event是否具有handler
+     * 判断 _events 中的一个 event 是否具有 handler
      * @param string $name the event name
      * @return boolean whether there is any handler attached to the event.
      */

@@ -87,7 +87,7 @@ class Object implements Configurable
     public static function className()
     {
         // get_called_class -- 后期静态绑定（"Late Static Binding"）类的名称
-        // 就是用那个类调用的这个方法，就返回那个类，返回值中带有namespace
+        // 就是用那个类调用的这个方法，就返回那个类，返回值中带有 namespace
         return get_called_class();
     }
 
@@ -107,16 +107,17 @@ class Object implements Configurable
      */
     public function __construct($config = [])
     {
-        // 根据config内容初始化该Object
+        // 根据 $config 内容初始化该对象
         if (!empty($config)) {
             Yii::configure($this, $config);
         }
-        // 调用init()方法，继承该类的类可以重写此方法，用于初始化
+        // 调用 init() 方法，继承该类的类可以重写 init 方法，用于初始化
         $this->init();
     }
 
     /**
      * Initializes the object.
+     * 初始化对象
      * This method is invoked at the end of the constructor after the object is initialized with the
      * given configuration.
      */
@@ -130,7 +131,7 @@ class Object implements Configurable
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$value = $object->property;`.
      *
-     * 魔术方法，实现getter
+     * 魔术方法，实现 getter
      *
      * @param string $name the property name
      * @return mixed the property value
@@ -142,10 +143,13 @@ class Object implements Configurable
     {
         $getter = 'get' . $name;
         if (method_exists($this, $getter)) {
+            // 对象存在 $getter 方法，就直接调用
             return $this->$getter();
         } elseif (method_exists($this, 'set' . $name)) {
+            // 如果存在 'set' . $name 方法，就认为该属性是只写的
             throw new InvalidCallException('Getting write-only property: ' . get_class($this) . '::' . $name);
         } else {
+            // 否则认为该属性不存在
             throw new UnknownPropertyException('Getting unknown property: ' . get_class($this) . '::' . $name);
         }
     }
@@ -156,7 +160,7 @@ class Object implements Configurable
      * Do not call this method directly as it is a PHP magic method that
      * will be implicitly called when executing `$object->property = $value;`.
      *
-     * 魔术方法，实现setter
+     * 魔术方法，实现 setter
      *
      * @param string $name the property name or the event name
      * @param mixed $value the property value
@@ -168,10 +172,13 @@ class Object implements Configurable
     {
         $setter = 'set' . $name;
         if (method_exists($this, $setter)) {
+            // 对象存在 $setter 方法，就直接调用
             $this->$setter($value);
         } elseif (method_exists($this, 'get' . $name)) {
+            // 如果存在 'get' . $name 方法，就认为该属性是只读的
             throw new InvalidCallException('Setting read-only property: ' . get_class($this) . '::' . $name);
         } else {
+            // 否则认为该属性不存在
             throw new UnknownPropertyException('Setting unknown property: ' . get_class($this) . '::' . $name);
         }
     }
@@ -184,7 +191,7 @@ class Object implements Configurable
      *
      * Note that if the property is not defined, false will be returned.
      *
-     * 魔术方法，实现isset，基于getter实现，有getter方法的属性才算存在
+     * 魔术方法，实现 isset，基于 getter 实现，有 getter 方法的属性才算存在
      *
      * @param string $name the property name or the event name
      * @return boolean whether the named property is set (not null).
@@ -193,6 +200,7 @@ class Object implements Configurable
     {
         $getter = 'get' . $name;
         if (method_exists($this, $getter)) {
+            // 有 $getter 方法且获取的值不为 null，才认为该属性存在
             return $this->$getter() !== null;
         } else {
             return false;
@@ -208,7 +216,7 @@ class Object implements Configurable
      * Note that if the property is not defined, this method will do nothing.
      * If the property is read-only, it will throw an exception.
      *
-     * 魔术方法，实现unset，基于setter实现，有setter方法的属性才能unset掉
+     * 魔术方法，实现 unset，基于 setter 实现，有 setter 方法的属性才能 unset 掉
      *
      * @param string $name the property name
      * @throws InvalidCallException if the property is read only.
@@ -217,8 +225,10 @@ class Object implements Configurable
     {
         $setter = 'set' . $name;
         if (method_exists($this, $setter)) {
+            // 通过 $setter 方法，将它设置为 null
             $this->$setter(null);
         } elseif (method_exists($this, 'get' . $name)) {
+            // 如果存在 'get' . $name 方法，就认为该属性是只读的
             throw new InvalidCallException('Unsetting read-only property: ' . get_class($this) . '::' . $name);
         }
     }
@@ -246,7 +256,7 @@ class Object implements Configurable
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      *
-     * 检查对象或类是否具有$name属性，如果$checkVars为true，则不局限于是否有getter/setter
+     * 检查对象或类是否具有 $name 属性，如果 $checkVars 为 true，则不局限于是否有 getter/setter
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -267,7 +277,7 @@ class Object implements Configurable
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      *
-     * 检查对象或类是否能够获取$name属性，如果$checkVars为true，则不局限于是否有getter
+     * 检查对象或类是否能够获取 $name 属性，如果 $checkVars 为 true，则不局限于是否有 getter
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -276,6 +286,7 @@ class Object implements Configurable
      */
     public function canGetProperty($name, $checkVars = true)
     {
+        // property_exists — 检查对象或类是否具有该属性
         return method_exists($this, 'get' . $name) || $checkVars && property_exists($this, $name);
     }
 
@@ -287,7 +298,7 @@ class Object implements Configurable
      *   (in this case, property name is case-insensitive);
      * - the class has a member variable with the specified name (when `$checkVars` is true);
      *
-     * 检查对象或类是否能够设置$name属性，如果$checkVars为true，则不局限于是否有setter
+     * 检查对象或类是否能够设置 $name 属性，如果 $checkVars 为 true，则不局限于是否有 setter
      *
      * @param string $name the property name
      * @param boolean $checkVars whether to treat member variables as properties
@@ -305,7 +316,7 @@ class Object implements Configurable
      * The default implementation is a call to php function `method_exists()`.
      * You may override this method when you implemented the php magic method `__call()`.
      *
-     * 检查对象或类是否具有$name方法
+     * 检查对象或类是否具有 $name 方法
      *
      * @param string $name the method name
      * @return boolean whether the method is defined
