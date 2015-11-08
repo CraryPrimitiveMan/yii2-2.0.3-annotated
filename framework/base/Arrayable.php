@@ -25,6 +25,8 @@ interface Arrayable
     /**
      * Returns the list of fields that should be returned by default by [[toArray()]] when no specific fields are specified.
      *
+     * 使用 toArray() 且没有特殊的 fields 时，返回的 fields 的列表
+     *
      * A field is a named element in the returned array by [[toArray()]].
      *
      * This method should return an array of field names or field definitions.
@@ -65,6 +67,8 @@ interface Arrayable
     /**
      * Returns the list of additional fields that can be returned by [[toArray()]] in addition to those listed in [[fields()]].
      *
+     * 使用 toArray() 时， 返回的额外的 fields 列表
+     *
      * This method is similar to [[fields()]] except that the list of fields declared
      * by this method are not returned by default by [[toArray()]]. Only when a field in the list
      * is explicitly requested, will it be included in the result of [[toArray()]].
@@ -77,6 +81,8 @@ interface Arrayable
     public function extraFields();
     /**
      * Converts the object into an array.
+     *
+     * 将一个对象转化成数组
      *
      * @param array $fields the fields that the output array should contain. Fields not specified
      * in [[fields()]] will be ignored. If this parameter is empty, all fields as specified in [[fields()]] will be returned.

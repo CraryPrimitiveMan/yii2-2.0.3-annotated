@@ -11,9 +11,11 @@ use Yii;
 
 /**
  * Object is the base class that implements the *property* feature.
+ * Object 是一个基础类，实现了属性的功能
  *
  * A property is defined by a getter method (e.g. `getLabel`), and/or a setter method (e.g. `setLabel`). For example,
  * the following getter and setter methods define a property named `label`:
+ * 一个定义了 getter 方法和/或者 setter 方法的属性
  *
  * ~~~
  * private $_label;
@@ -30,9 +32,11 @@ use Yii;
  * ~~~
  *
  * Property names are *case-insensitive*.
+ * 属性名是大小写敏感的
  *
  * A property can be accessed like a member variable of an object. Reading or writing a property will cause the invocation
  * of the corresponding getter or setter method. For example,
+ * 属性能够被当做对象的成员变量使用
  *
  * ~~~
  * // equivalent to $label = $object->getLabel();

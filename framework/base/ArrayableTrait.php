@@ -70,7 +70,10 @@ trait ArrayableTrait
      */
     public function fields()
     {
+        // 获取该对象的 public 成员变量的名列表，赋给 $fields
         $fields = array_keys(Yii::getObjectVars($this));
+        // array_combine — 创建一个数组，用一个数组的值作为其键名，另一个数组的值作为其值
+        // 返回数组， keys 和 values 都是 $fields
         return array_combine($fields, $fields);
     }
 
@@ -117,6 +120,7 @@ trait ArrayableTrait
     {
         $data = [];
         foreach ($this->resolveFields($fields, $expand) as $field => $definition) {
+            // 如果是 string， 就返回当前对象的该属性， 否则调用 call_user_func 去执行 $definition 函数
             $data[$field] = is_string($definition) ? $this->$definition : call_user_func($definition, $this, $field);
         }
 
@@ -129,6 +133,7 @@ trait ArrayableTrait
 
     /**
      * Determines which fields can be returned by [[toArray()]].
+     * 决定哪些 fields 会通过 toArray() 返回
      * This method will check the requested fields against those declared in [[fields()]] and [[extraFields()]]
      * to determine which fields can be returned.
      * @param array $fields the fields being requested for exporting
@@ -140,11 +145,16 @@ trait ArrayableTrait
     {
         $result = [];
 
+        // 循环 $this->fields() 中取得的 fields
         foreach ($this->fields() as $field => $definition) {
             if (is_integer($field)) {
+                // 如果 $field 是 int， 就将 $definition 赋值给 $field
                 $field = $definition;
             }
             if (empty($fields) || in_array($field, $fields, true)) {
+                // 如果 $fields 为空， 或者 $field 在 $fields 中， 就将 $definition 赋到 $result 中
+                // 即 $fields 为空，就将所有的对象的属性都放入到结果中
+                // 不为空时，如果当前对象的属性在 $fields 中存在， 就将对象中定义的该属性的值放入到结果中
                 $result[$field] = $definition;
             }
         }
@@ -153,11 +163,15 @@ trait ArrayableTrait
             return $result;
         }
 
+        // 循环 $this->extraFields() 中取得的 fields
         foreach ($this->extraFields() as $field => $definition) {
             if (is_integer($field)) {
+                // 如果 $field 是 int， 就将 $definition 赋值给 $field
                 $field = $definition;
             }
             if (in_array($field, $expand, true)) {
+                // 如果$field 在 $expand 中， 就将 $definition 赋到 $result 中
+                // 即当前对象的扩展属性在 $fields 中存在， 就将对象中定义的该扩展属性的值放入到结果中
                 $result[$field] = $definition;
             }
         }
