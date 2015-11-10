@@ -505,6 +505,9 @@ class BaseArrayHelper
     /**
      * Returns a value indicating whether the given array is an associative array.
      *
+     * 返回是否是一个关联数组
+     * $allStrings 标记是必须所有的 key 都为 string，还是说只要有一个为 string，就认为数组是关联数组
+     *
      * An array is associative if all its keys are strings. If `$allStrings` is false,
      * then an array will be treated as associative if at least one of its keys is a string.
      *

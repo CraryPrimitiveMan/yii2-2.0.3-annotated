@@ -28,6 +28,7 @@ use yii\validators\Validator;
  * ArrayAccess::offsetGet — 获取一个偏移位置的值
  * ArrayAccess::offsetSet — 设置一个偏移位置的值
  * ArrayAccess::offsetUnset — 复位一个偏移位置的值
+ * 在 Model 中用于实现将 $model[$field] 替换为 $model->$field
  *
  * Model implements the following commonly used features:
  *
@@ -858,6 +859,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
 
     /**
      * Populates a set of models with the data from end user.
+     * 加载数据到所在的 model 的集合中
      * This method is mainly used to collect tabular data input.
      * The data to be loaded for each model is `$data[formName][index]`, where `formName`
      * refers to the value of [[formName()]], and `index` the index of the model in the `$models` array.
@@ -875,22 +877,28 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
     {
         if ($formName === null) {
             /* @var $first Model */
+            // reset — 将数组的内部指针指向第一个单元
             $first = reset($models);
             if ($first === false) {
+                // 不存在就返回 false
                 return false;
             }
+            // 拿到所在类的名称（不含 namespace）
             $formName = $first->formName();
         }
 
         $success = false;
+        // 遍历 $models，一个个 load 数据
         foreach ($models as $i => $model) {
             /* @var $model Model */
             if ($formName == '') {
                 if (!empty($data[$i])) {
+                    // 数据不为空，就 load 到相应的 model 中
                     $model->load($data[$i], '');
                     $success = true;
                 }
             } elseif (!empty($data[$formName][$i])) {
+                // 存在 $formName，且数据不为空，就 load 到相应的 model 中
                 $model->load($data[$formName][$i], '');
                 $success = true;
             }
@@ -969,7 +977,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
     public function fields()
     {
         $fields = $this->attributes();
-
+        // array_combine — 创建一个数组，用一个数组的值作为其键名，另一个数组的值作为其值
         return array_combine($fields, $fields);
     }
 
@@ -996,6 +1004,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function offsetExists($offset)
     {
+        // 将 isset($model[$offset]) 重写为 isset($model->$offset)
         return $this->$offset !== null;
     }
 
@@ -1008,6 +1017,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function offsetGet($offset)
     {
+        // 将获取 $model[$offset] 重写为 $model->$offset
         return $this->$offset;
     }
 
@@ -1020,6 +1030,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function offsetSet($offset, $item)
     {
+        // 将 $model[$offset] = $item 重写为 $model->$offset = $item
         $this->$offset = $item;
     }
 
@@ -1031,6 +1042,7 @@ class Model extends Component implements IteratorAggregate, ArrayAccess, Arrayab
      */
     public function offsetUnset($offset)
     {
+        // 将 unset($model[$offset]) 重写为 $model->$offset = null
         $this->$offset = null;
     }
 }
