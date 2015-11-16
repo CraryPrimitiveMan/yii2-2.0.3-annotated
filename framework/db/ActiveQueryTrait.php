@@ -33,6 +33,7 @@ trait ActiveQueryTrait
 
     /**
      * Sets the [[asArray]] property.
+     * 设置 asArray 属性，标记是否将返回的记录转化为数组
      * @param boolean $value whether to return the query results in terms of arrays instead of Active Records.
      * @return static the query object itself
      */
@@ -44,6 +45,7 @@ trait ActiveQueryTrait
 
     /**
      * Specifies the relations with which this query should be performed.
+     * 为该 Query 关联其他表
      *
      * The parameters to this method can be either one or multiple strings, or a single array
      * of relation names and the optional callbacks to customize the relations.
@@ -81,20 +83,31 @@ trait ActiveQueryTrait
      */
     public function with()
     {
+        // func_get_args — 返回一个包含函数参数列表的数组
+        // 参数个数不确定，所以使用 func_get_args
         $with = func_get_args();
         if (isset($with[0]) && is_array($with[0])) {
             // the parameter is given as an array
+            // 如果参数是一个数组，就会认为数组中的值是要关联的内容
+            // 所以就会存在如下两种使用方法，它们是等价的
+            // 1. Customer::find()->with('orders', 'country')->all();
+            // 2. Customer::find()->with(['orders', 'country'])->all();
             $with = $with[0];
         }
 
         if (empty($this->with)) {
+            // 如果之前没有使用过 with，直接赋值即可
             $this->with = $with;
         } elseif (!empty($with)) {
+            // 否则要把两者合并起来
             foreach ($with as $name => $value) {
                 if (is_integer($name)) {
                     // repeating relation is fine as normalizeRelations() handle it well
+                    // 索引是数字，就重新插入，以免覆盖
                     $this->with[] = $value;
                 } else {
+                    // 否则直接覆盖，例子如下
+                    // Customer::find()->with(['orders' => function ($query) {$query->andWhere('status = 1');}, 'country'])->all();
                     $this->with[$name] = $value;
                 }
             }

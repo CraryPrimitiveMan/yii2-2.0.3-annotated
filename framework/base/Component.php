@@ -499,6 +499,7 @@ class Component extends Object
     public function hasEventHandlers($name)
     {
         $this->ensureBehaviors();
+        // _events 中存在 $name 的 event 或者 $name 的 event 是否含有该对象所在的类的 handler
         return !empty($this->_events[$name]) || Event::hasHandlers($this, $name);
     }
 

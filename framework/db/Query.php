@@ -45,6 +45,7 @@ class Query extends Component implements QueryInterface
 
     /**
      * @var array the columns being selected. For example, `['id', 'name']`.
+     * 要 select 出来的列
      * This is used to construct the SELECT clause in a SQL statement. If not set, it means selecting all columns.
      * @see select()
      */
@@ -57,17 +58,20 @@ class Query extends Component implements QueryInterface
     /**
      * @var boolean whether to select distinct rows of data only. If this is set true,
      * the SELECT clause would be changed to SELECT DISTINCT.
+     * 要 distinct 的列
      */
     public $distinct;
     /**
      * @var array the table(s) to be selected from. For example, `['user', 'post']`.
      * This is used to construct the FROM clause in a SQL statement.
+     * 要查询的表
      * @see from()
      */
     public $from;
     /**
      * @var array how to group the query results. For example, `['company', 'department']`.
      * This is used to construct the GROUP BY clause in a SQL statement.
+     * 要分组的列
      */
     public $groupBy;
     /**
@@ -86,11 +90,13 @@ class Query extends Component implements QueryInterface
      *     ['LEFT JOIN', 'team', 'team.id = team_id'],
      * ]
      * ~~~
+     * 要关联的表的相关内容
      */
     public $join;
     /**
      * @var string|array the condition to be applied in the GROUP BY clause.
      * It can be either a string or an array. Please refer to [[where()]] on how to specify the condition.
+     * having 的条件
      */
     public $having;
     /**
@@ -117,8 +123,10 @@ class Query extends Component implements QueryInterface
     public function createCommand($db = null)
     {
         if ($db === null) {
+            // 获取 db 的实例，其实就是我们配置的 db component
             $db = Yii::$app->getDb();
         }
+        // $db->getQueryBuilder() 会根据数据库相应类型创建一个 QueryBuilder 对象
         list ($sql, $params) = $db->getQueryBuilder()->build($this);
 
         return $db->createCommand($sql, $params);

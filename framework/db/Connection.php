@@ -17,6 +17,15 @@ use yii\caching\Cache;
 /**
  * Connection represents a connection to a database via [PDO](php.net/manual/en/book.pdo.php).
  *
+ * 我通常会如下配置使用，其中的 MYSQL_HOST/MYSQL_DATABASE/MYSQL_USER_NAME 和 MYSQL_USER_PASSWORD 都是定义好的全局常量
+ * 'db' => [
+ *     'class' => 'yii\db\Connection',
+ *     'dsn' => 'mysql:host=' . MYSQL_HOST . ';dbname=' . MYSQL_DATABASE,
+ *     'username' => MYSQL_USER_NAME,
+ *     'password' => MYSQL_USER_PASSWORD,
+ *     'charset' => 'utf8',
+ * ]
+ *
  * Connection works together with [[Command]], [[DataReader]] and [[Transaction]]
  * to provide data access to various DBMS in a common set of APIs. They are a thin wrapper
  * of the [[PDO PHP extension]](php.net/manual/en/book.pdo.php).
@@ -80,7 +89,7 @@ use yii\caching\Cache;
  * You also can use shortcut for the above like the following:
  *
  * ~~~
- * $connection->transaction(function() {
+ * $connection->transaction(function () {
  *     $order = new Order($customer);
  *     $order->save();
  *     $order->addItems($items);
@@ -90,7 +99,7 @@ use yii\caching\Cache;
  * If needed you can pass transaction isolation level as a second parameter:
  *
  * ~~~
- * $connection->transaction(function(Connection $db) {
+ * $connection->transaction(function (Connection $db) {
  *     //return $db->...
  * }, Transaction::READ_UNCOMMITTED);
  * ~~~
@@ -677,8 +686,10 @@ class Connection extends Component
         if ($this->_schema !== null) {
             return $this->_schema;
         } else {
+            // 获取数据库的类型
             $driver = $this->getDriverName();
             if (isset($this->schemaMap[$driver])) {
+                // 如果 schemaMap 中存在这种数据库的类型，就根据数据库类型所对应的类，去实例化
                 $config = !is_array($this->schemaMap[$driver]) ? ['class' => $this->schemaMap[$driver]] : $this->schemaMap[$driver];
                 $config['db'] = $this;
 
@@ -695,6 +706,8 @@ class Connection extends Component
      */
     public function getQueryBuilder()
     {
+        // getSchema() 会拿到数据库相应类型的　schema
+        // getQueryBuilder() 会基于当前的 db 创建一个 QueryBuilder 对象
         return $this->getSchema()->getQueryBuilder();
     }
 
@@ -785,12 +798,15 @@ class Connection extends Component
     /**
      * Returns the name of the DB driver. Based on the the current [[dsn]], in case it was not set explicitly
      * by an end user.
+     * 解析出是哪种数据库
      * @return string name of the DB driver
      */
     public function getDriverName()
     {
         if ($this->_driverName === null) {
             if (($pos = strpos($this->dsn, ':')) !== false) {
+                // 如果配置的 dsn 中含有冒号，就取出冒号之前的字符串，并变成小写
+                // dsn 的 mysql 配置如：'mysql:host=127.0.0.1;dbname=test'
                 $this->_driverName = strtolower(substr($this->dsn, 0, $pos));
             } else {
                 $this->_driverName = strtolower($this->getSlavePdo()->getAttribute(PDO::ATTR_DRIVER_NAME));
@@ -801,10 +817,12 @@ class Connection extends Component
 
     /**
      * Changes the current driver name.
+     * 设置数据库的 driver
      * @param string $driverName name of the DB driver
      */
     public function setDriverName($driverName)
     {
+        // 转成小写，便于从 map 中取值
         $this->_driverName = strtolower($driverName);
     }
 
