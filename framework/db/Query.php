@@ -129,6 +129,7 @@ class Query extends Component implements QueryInterface
         // $db->getQueryBuilder() 会根据数据库相应类型创建一个 QueryBuilder 对象
         list ($sql, $params) = $db->getQueryBuilder()->build($this);
 
+        // 返回一个 Command 对象
         return $db->createCommand($sql, $params);
     }
 
@@ -205,6 +206,7 @@ class Query extends Component implements QueryInterface
 
     /**
      * Executes the query and returns all results as an array.
+     * 执行 query 并返回一个数组包含所有的结果
      * @param Connection $db the database connection used to generate the SQL statement.
      * If this parameter is not given, the `db` application component will be used.
      * @return array the query results. If the query results in nothing, an empty array will be returned.

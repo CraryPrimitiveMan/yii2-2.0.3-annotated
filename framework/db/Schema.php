@@ -37,6 +37,7 @@ abstract class Schema extends Object
 {
     /**
      * The followings are the supported abstract column data types.
+     * 预定义16种抽象字段类型
      */
     const TYPE_PK = 'pk';
     const TYPE_BIGPK = 'bigpk';
@@ -211,10 +212,12 @@ abstract class Schema extends Object
 
     /**
      * @return QueryBuilder the query builder for this connection.
+     * 返回当前 connection 的 QueryBuilder 对象
      */
     public function getQueryBuilder()
     {
         if ($this->_builder === null) {
+            // 创建相应数据库的 QueryBuilder 对象，并缓存到 _builder 中
             $this->_builder = $this->createQueryBuilder();
         }
 
@@ -260,6 +263,7 @@ abstract class Schema extends Object
 
     /**
      * Creates a query builder for the database.
+     * 创建该数据库的 QueryBuilder 对象
      * This method may be overridden by child classes to create a DBMS-specific query builder.
      * @return QueryBuilder query builder instance
      */

@@ -21,6 +21,7 @@ class Schema extends \yii\db\Schema
 {
     /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
+     * 定义从数据库数据类型到16个抽象数据类型间的映射关系
      */
     public $typeMap = [
         'tinyint' => self::TYPE_SMALLINT,
@@ -72,6 +73,7 @@ class Schema extends \yii\db\Schema
      */
     public function quoteSimpleColumnName($name)
     {
+        // 如果不存在 '`' 并且不是 '*'，就在字段名的两端拼上 '`'
         return strpos($name, '`') !== false || $name === '*' ? $name : '`' . $name . '`';
     }
 

@@ -146,19 +146,27 @@ class ActiveQuery extends Query implements ActiveQueryInterface
 
         if (empty($this->from)) {
             /* @var $modelClass ActiveRecord */
+            // 如果没有设置 from，就认为是 ActiveRecord 使用的
             $modelClass = $this->modelClass;
+            // 取出表名，放入到 from 中
             $tableName = $modelClass::tableName();
             $this->from = [$tableName];
         }
 
         if (empty($this->select) && !empty($this->join)) {
+            // 如果没有定义 select 并且定义了 join
+            // 遍历 from，假设其值为 ['cat' => 'category', 'user']
             foreach ((array) $this->from as $alias => $table) {
                 if (is_string($alias)) {
+                    // 如果索引是字符串，就表示 $alias 是相应的简称
+                    // 所以需要将其对应的表的字段（即 "$alias.*"） 放入到 select 中
                     $this->select = ["$alias.*"];
                 } elseif (is_string($table)) {
                     if (preg_match('/^(.*?)\s+({{\w+}}|\w+)$/', $table, $matches)) {
+                        // 支持 $table 是 'category cat' 的形式，这样会匹配出 cat 简称
                         $alias = $matches[2];
                     } else {
+                        // 不匹配，直接使用表名
                         $alias = $table;
                     }
                     $this->select = ["$alias.*"];
@@ -169,9 +177,11 @@ class ActiveQuery extends Query implements ActiveQueryInterface
 
         if ($this->primaryModel === null) {
             // eager loading
+            // 立即加载
             $query = Query::create($this);
         } else {
             // lazy loading of a relation
+            // 延迟加载
             $where = $this->where;
 
             if ($this->via instanceof self) {

@@ -76,6 +76,7 @@ class QueryBuilder extends \yii\base\Object
 
     /**
      * Generates a SELECT SQL statement from a [[Query]] object.
+     * 基于 Query 对象生成 SELECT SQL statement
      * @param Query $query the [[Query]] object from which the SQL statement will be generated.
      * @param array $params the parameters to be bound to the generated SQL statement. These parameters will
      * be included in the result with the additional parameters generated during the query building process.
@@ -87,6 +88,7 @@ class QueryBuilder extends \yii\base\Object
     {
         $query = $query->prepare($this);
 
+        // 将 query 中的参数与传入的参数 merge，以 query 中的参数 为主
         $params = empty($params) ? $query->params : array_merge($params, $query->params);
 
         $clauses = [
@@ -605,6 +607,7 @@ class QueryBuilder extends \yii\base\Object
     }
 
     /**
+     * 根据数据组装 sql 中的 select 部分
      * @param array $columns
      * @param array $params the binding parameters to be populated
      * @param boolean $distinct
@@ -619,26 +622,37 @@ class QueryBuilder extends \yii\base\Object
         }
 
         if (empty($columns)) {
+            // 要选择的列为空，就拼上 *，筛选出所有的列
             return $select . ' *';
         }
 
         foreach ($columns as $i => $column) {
             if ($column instanceof Expression) {
+                // 如果该列继承自 Expression
                 if (is_int($i)) {
+                    // 索引是 int，直接赋值
                     $columns[$i] = $column->expression;
                 } else {
+                    // 否则，需要将索引 $i 作为别名
                     $columns[$i] = $column->expression . ' AS ' . $this->db->quoteColumnName($i);
                 }
+                // 合并参数
                 $params = array_merge($params, $column->params);
             } elseif ($column instanceof Query) {
+                // 如果该列继承自 Query
+                // 递归调用 build 方法，生成 sql
                 list($sql, $params) = $this->build($column, $params);
                 $columns[$i] = "($sql) AS " . $this->db->quoteColumnName($i);
             } elseif (is_string($i)) {
+                // 如果该列的索引是字符串
                 if (strpos($column, '(') === false) {
+                    // 如果不存在 '('，就将 $column 作为字符串处理
                     $column = $this->db->quoteColumnName($column);
                 }
                 $columns[$i] = "$column AS " . $this->db->quoteColumnName($i);
             } elseif (strpos($column, '(') === false) {
+                // 如果该列不存在 '('
+                // 下面正则中的 ?i: 其实就是 ?:，只不过加上 i 可以忽略大小写
                 if (preg_match('/^(.*?)(?i:\s+as\s+|\s+)([\w\-_\.]+)$/', $column, $matches)) {
                     $columns[$i] = $this->db->quoteColumnName($matches[1]) . ' AS ' . $this->db->quoteColumnName($matches[2]);
                 } else {
@@ -647,10 +661,12 @@ class QueryBuilder extends \yii\base\Object
             }
         }
 
+        // 将 $columns 用逗号拼接起来，作为要 select 的列
         return $select . ' ' . implode(', ', $columns);
     }
 
     /**
+     * 根据数据组装 sql 中的 from 部分
      * @param array $tables
      * @param array $params the binding parameters to be populated
      * @return string the FROM clause built from [[Query::$from]].
@@ -663,10 +679,12 @@ class QueryBuilder extends \yii\base\Object
 
         $tables = $this->quoteTableNames($tables, $params);
 
+        // 拼接 table 的名字
         return 'FROM ' . implode(', ', $tables);
     }
 
     /**
+     * 根据数据组装 sql 中的 join 部分
      * @param array $joins
      * @param array $params the binding parameters to be populated
      * @return string the JOIN clause built from [[Query::$join]].
@@ -700,7 +718,7 @@ class QueryBuilder extends \yii\base\Object
 
     /**
      * Quotes table names passed
-     *
+     * 处理 table 的名字，方法内容与 buildSelect 很像，就不加注释了
      * @param array $tables
      * @param array $params
      * @return array
@@ -728,6 +746,7 @@ class QueryBuilder extends \yii\base\Object
     }
 
     /**
+     * 根据数据组装 sql 中的 where 部分
      * @param string|array $condition
      * @param array $params the binding parameters to be populated
      * @return string the WHERE clause built from [[Query::$where]].
@@ -740,6 +759,7 @@ class QueryBuilder extends \yii\base\Object
     }
 
     /**
+     * 根据数据组装 sql 中的 group by 部分
      * @param array $columns
      * @return string the GROUP BY clause
      */
@@ -749,6 +769,7 @@ class QueryBuilder extends \yii\base\Object
     }
 
     /**
+     * 根据数据组装 sql 中的 having 部分
      * @param string|array $condition
      * @param array $params the binding parameters to be populated
      * @return string the HAVING clause built from [[Query::$having]].
@@ -762,6 +783,7 @@ class QueryBuilder extends \yii\base\Object
 
     /**
      * Builds the ORDER BY and LIMIT/OFFSET clauses and appends them to the given SQL.
+     * 根据数据组装 sql 中的 order by 和 limit 部分
      * @param string $sql the existing SQL (without ORDER BY/LIMIT/OFFSET)
      * @param array $orderBy the order by columns. See [[Query::orderBy]] for more details on how to specify this parameter.
      * @param integer $limit the limit number. See [[Query::limit]] for more details.
@@ -782,6 +804,7 @@ class QueryBuilder extends \yii\base\Object
     }
 
     /**
+     * 根据数据组装 sql 中的 order by 部分
      * @param array $columns
      * @return string the ORDER BY clause built from [[Query::$orderBy]].
      */
@@ -803,6 +826,7 @@ class QueryBuilder extends \yii\base\Object
     }
 
     /**
+     * 根据数据组装 sql 中的 limit 部分
      * @param integer $limit
      * @param integer $offset
      * @return string the LIMIT and OFFSET clauses
@@ -841,6 +865,7 @@ class QueryBuilder extends \yii\base\Object
     }
 
     /**
+     * 根据数据组装 sql 中的 union 部分
      * @param array $unions
      * @param array $params the binding parameters to be populated
      * @return string the UNION clause built from [[Query::$union]].

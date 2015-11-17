@@ -702,6 +702,7 @@ class Connection extends Component
 
     /**
      * Returns the query builder for the current DB connection.
+     * 返回一个基于当前的 db 链接的 QueryBuilder 对象
      * @return QueryBuilder the query builder for the current DB connection.
      */
     public function getQueryBuilder()

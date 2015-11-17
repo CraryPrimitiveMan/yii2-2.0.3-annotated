@@ -20,6 +20,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
 {
     /**
      * @var array mapping from abstract column types (keys) to physical column types (values).
+     * 定义16种抽象字段类型到数据库物理字段类型的映射关系
      */
     public $typeMap = [
         Schema::TYPE_PK => 'int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY',
