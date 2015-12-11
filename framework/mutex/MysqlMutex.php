@@ -29,6 +29,11 @@ use yii\base\InvalidConfigException;
  * ]
  * ```
  *
+ * GET_LOCK('MySQL',10)返回结果为1，说明成功得到了一个名称为'MySQL'的锁，持续时间为10秒。
+ * IS_USED_LOCK('MySQL')返回结果为当前连接ID，表示名称为'MySQL'的锁正在被使用。
+ * IS_FREE_LOCK('MySQL')返回结果为0，说明名称为'MySQL'的锁正在被使用。
+ * RELEASE_LOCK('MySQL')返回值为1，说明解锁成功。
+ *
  * @see Mutex
  *
  * @author resurtm <resurtm@gmail.com>
