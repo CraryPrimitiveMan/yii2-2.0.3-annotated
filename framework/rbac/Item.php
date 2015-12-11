@@ -15,7 +15,13 @@ use yii\base\Object;
  */
 class Item extends Object
 {
+    /**
+     * 角色
+     */
     const TYPE_ROLE = 1;
+    /**
+     * 权限
+     */
     const TYPE_PERMISSION = 2;
 
     /**
