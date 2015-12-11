@@ -44,6 +44,7 @@ class QueryBuilder extends \yii\base\Object
 
     /**
      * @var array map of query condition to builder methods.
+     * 查询条件与构建方法的 map
      * These methods are used by [[buildCondition]] to build SQL conditions from array syntax.
      */
     protected $conditionBuilders = [
@@ -92,11 +93,17 @@ class QueryBuilder extends \yii\base\Object
         $params = empty($params) ? $query->params : array_merge($params, $query->params);
 
         $clauses = [
+            // 构建 sql 中的 select 部分
             $this->buildSelect($query->select, $params, $query->distinct, $query->selectOption),
+            // 构建 sql 中的 from 部分
             $this->buildFrom($query->from, $params),
+            // 构建 sql 中的 join 部分
             $this->buildJoin($query->join, $params),
+            // 构建 sql 中的 where 部分
             $this->buildWhere($query->where, $params),
+            // 构建 sql 中的 groupBy 部分
             $this->buildGroupBy($query->groupBy),
+            // 构建 sql 中的 having 部分
             $this->buildHaving($query->having, $params),
         ];
 
@@ -654,8 +661,10 @@ class QueryBuilder extends \yii\base\Object
                 // 如果该列不存在 '('
                 // 下面正则中的 ?i: 其实就是 ?:，只不过加上 i 可以忽略大小写
                 if (preg_match('/^(.*?)(?i:\s+as\s+|\s+)([\w\-_\.]+)$/', $column, $matches)) {
+                    // 存在别名的情况
                     $columns[$i] = $this->db->quoteColumnName($matches[1]) . ' AS ' . $this->db->quoteColumnName($matches[2]);
                 } else {
+                    // 不存在别名的情况
                     $columns[$i] = $this->db->quoteColumnName($column);
                 }
             }
@@ -685,6 +694,14 @@ class QueryBuilder extends \yii\base\Object
 
     /**
      * 根据数据组装 sql 中的 join 部分
+     *
+     * Join 内容的一个例子
+     * ~~~
+     * [
+     *     ['INNER JOIN', 'user', 'user.id = author_id'],
+     *     ['LEFT JOIN', 'team', 'team.id = team_id'],
+     * ]
+     *
      * @param array $joins
      * @param array $params the binding parameters to be populated
      * @return string the JOIN clause built from [[Query::$join]].
@@ -702,12 +719,16 @@ class QueryBuilder extends \yii\base\Object
             }
             // 0:join type, 1:join table, 2:on-condition (optional)
             list ($joinType, $table) = $join;
+            // 构建 table 名，处理它是一个 Query 实例或存在别名的情况，也可能存在函数
             $tables = $this->quoteTableNames((array) $table, $params);
+            // 获取第一个为表名，其实就传入了一个，只不过返回值是数组
             $table = reset($tables);
+            // 直接覆盖掉原来的值，但不会影响 $join 中的值，因为它是一份拷贝
             $joins[$i] = "$joinType $table";
             if (isset($join[2])) {
                 $condition = $this->buildCondition($join[2], $params);
                 if ($condition !== '') {
+                    // 拼接 ON
                     $joins[$i] .= ' ON ' . $condition;
                 }
             }
@@ -727,6 +748,7 @@ class QueryBuilder extends \yii\base\Object
     {
         foreach ($tables as $i => $table) {
             if ($table instanceof Query) {
+                // 如果继承自 Query，要调用 build 方法，构建出相应的 sql
                 list($sql, $params) = $this->build($table, $params);
                 $tables[$i] = "($sql) " . $this->db->quoteTableName($i);
             } elseif (is_string($i)) {
@@ -918,6 +940,7 @@ class QueryBuilder extends \yii\base\Object
 
     /**
      * Parses the condition specification and generates the corresponding SQL expression.
+     * 解析条件生成相应的 SQL 表达式
      * @param string|array $condition the condition specification. Please refer to [[Query::where()]]
      * on how to specify a condition.
      * @param array $params the binding parameters to be populated
@@ -926,27 +949,35 @@ class QueryBuilder extends \yii\base\Object
     public function buildCondition($condition, &$params)
     {
         if (!is_array($condition)) {
+            // 不是数组就转成字符串返回
             return (string) $condition;
         } elseif (empty($condition)) {
+            // 为空，直接返回空字符串
             return '';
         }
 
         if (isset($condition[0])) { // operator format: operator, operand 1, operand 2, ...
             $operator = strtoupper($condition[0]);
             if (isset($this->conditionBuilders[$operator])) {
+                // 如果支持该操作，就选出相应的方法
                 $method = $this->conditionBuilders[$operator];
             } else {
+                // 默认的构建方法是 buildSimpleCondition
                 $method = 'buildSimpleCondition';
             }
+            // 将操作的标记移除
             array_shift($condition);
+            // 执行相应的构建方法
             return $this->$method($operator, $condition, $params);
         } else { // hash format: 'column1' => 'value1', 'column2' => 'value2', ...
+            // 不存在操作标记，直接使用 buildHashCondition 构建
             return $this->buildHashCondition($condition, $params);
         }
     }
 
     /**
      * Creates a condition based on column-value pairs.
+     * 基于键值对创建条件
      * @param array $condition the condition specification.
      * @param array $params the binding parameters to be populated
      * @return string the generated SQL expression
@@ -957,14 +988,18 @@ class QueryBuilder extends \yii\base\Object
         foreach ($condition as $column => $value) {
             if (is_array($value) || $value instanceof Query) {
                 // IN condition
+                // 如果值是数组或者是一个 Query 的实例，就是用 IN 条件
                 $parts[] = $this->buildInCondition('IN', [$column, $value], $params);
             } else {
                 if (strpos($column, '(') === false) {
+                    // 没有函数时，才在列名两边添加单引号
                     $column = $this->db->quoteColumnName($column);
                 }
                 if ($value === null) {
+                    // 值为 null，sql 中需要用 IS NULL
                     $parts[] = "$column IS NULL";
                 } elseif ($value instanceof Expression) {
+                    // 如果是一个数据库的表达式，就直接拼接
                     $parts[] = "$column=" . $value->expression;
                     foreach ($value->params as $n => $v) {
                         $params[$n] = $v;
