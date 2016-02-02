@@ -53,6 +53,8 @@ class BaseArrayHelper
      * ]
      * ~~~
      *
+     * 将 $object 在 $properties 中定义的属性取出组建成一个数组，$recursive表示是否递归的转换
+     *
      * @param boolean $recursive whether to recursively converts properties which are objects into arrays.
      * @return array the array representation of the object
      */
@@ -62,6 +64,7 @@ class BaseArrayHelper
             if ($recursive) {
                 foreach ($object as $key => $value) {
                     if (is_array($value) || is_object($value)) {
+                        // 如果值是数组或者对象，递归调用
                         $object[$key] = static::toArray($value, $properties, true);
                     }
                 }
@@ -75,6 +78,7 @@ class BaseArrayHelper
                     $result = [];
                     foreach ($properties[$className] as $key => $name) {
                         if (is_int($key)) {
+                            // $key 为 int，表示其索引值要被 $name 替换掉
                             $result[$name] = $object->$name;
                         } else {
                             $result[$key] = static::getValue($object, $name);
@@ -84,6 +88,7 @@ class BaseArrayHelper
                     return $recursive ? static::toArray($result, $properties) : $result;
                 }
             }
+            // 取所有的属性
             if ($object instanceof Arrayable) {
                 $result = $object->toArray();
             } else {
@@ -95,6 +100,7 @@ class BaseArrayHelper
 
             return $recursive ? static::toArray($result) : $result;
         } else {
+            // 既不是数组也不是对象，直接在外边包一层，成为数组
             return [$object];
         }
     }
@@ -107,6 +113,9 @@ class BaseArrayHelper
      * type and are having the same key.
      * For integer-keyed elements, the elements from the latter array will
      * be appended to the former array.
+     *
+     * 递归的合并数组
+     *
      * @param array $a array to be merged to
      * @param array $b array to be merged from. You can specify additional
      * arrays via third argument, fourth argument etc.
@@ -114,7 +123,9 @@ class BaseArrayHelper
      */
     public static function merge($a, $b)
     {
+        // func_get_args — 返回一个包含函数参数列表的数组
         $args = func_get_args();
+        // 从头开始取参数
         $res = array_shift($args);
         while (!empty($args)) {
             $next = array_shift($args);
@@ -126,8 +137,10 @@ class BaseArrayHelper
                         $res[$k] = $v;
                     }
                 } elseif (is_array($v) && isset($res[$k]) && is_array($res[$k])) {
+                    // 如果两个数组的某个键值的值也都是数组，就递归的调用 merge 方法
                     $res[$k] = self::merge($res[$k], $v);
                 } else {
+                    // 后面的值会覆盖前面的值
                     $res[$k] = $v;
                 }
             }
@@ -162,6 +175,8 @@ class BaseArrayHelper
      * $street = \yii\helpers\ArrayHelper::getValue($users, 'address.street');
      * ~~~
      *
+     * 获取一个数组或者对象中的某个键的值，$default 表示值
+     *
      * @param array|object $array array or object to extract value from
      * @param string|\Closure $key key name of the array element, or property name of the object,
      * or an anonymous function returning the value. The anonymous function signature should be:
@@ -173,6 +188,7 @@ class BaseArrayHelper
      */
     public static function getValue($array, $key, $default = null)
     {
+        // Closure 类 — 用于代表匿名函数的类.
         if ($key instanceof \Closure) {
             return $key($array, $default);
         }
@@ -182,6 +198,7 @@ class BaseArrayHelper
         }
 
         if (($pos = strrpos($key, '.')) !== false) {
+            // $key 中含有 '.', 要递归的一层层找下去
             $array = static::getValue($array, substr($key, 0, $pos), $default);
             $key = substr($key, $pos + 1);
         }
@@ -208,6 +225,8 @@ class BaseArrayHelper
      * // $array content
      * // $array = ['options' => [1, 2]];
      * ~~~
+     *
+     * 根据键值移除数组中的项，并返回移除项的值，如果不存在该索引，就返回 $default
      *
      * @param array $array the array to extract value from
      * @param string $key key name of the array element
@@ -255,6 +274,8 @@ class BaseArrayHelper
      * });
      * ~~~
      *
+     * 将数组中的某一列的值设置为数组的索引
+     *
      * @param array $array the array that needs to be indexed
      * @param string|\Closure $key the column name or anonymous function whose result will be used to index the array
      * @return array the indexed array
@@ -289,6 +310,8 @@ class BaseArrayHelper
      *     return $element['id'];
      * });
      * ~~~
+     *
+     * 获取数组中的某一列形成新的数组返回，$keepKeys 表示是否保持当前的索引
      *
      * @param array $array
      * @param string|\Closure $name
@@ -347,6 +370,8 @@ class BaseArrayHelper
      * // ]
      * ~~~
      *
+     * 将一个数组变为特殊的键值对，$from 表示索引的值所在的列，$to 表示值所在的列，$group 表示按照哪一列分组
+     *
      * @param array $array
      * @param string|\Closure $from
      * @param string|\Closure $to
@@ -373,6 +398,9 @@ class BaseArrayHelper
      * Checks if the given array contains the specified key.
      * This method enhances the `array_key_exists()` function by supporting case-insensitive
      * key comparison.
+     *
+     * 检验数组中是否存在 $key，与 `array_key_exists()` 方法不同的是，它可以支持大小写不敏感，默认是大小写敏感的
+     *
      * @param string $key the key to check
      * @param array $array the array with keys to check
      * @param boolean $caseSensitive whether the key comparison should be case-sensitive
@@ -395,6 +423,7 @@ class BaseArrayHelper
 
     /**
      * Sorts an array of objects or arrays (with the same structure) by one or several keys.
+     * 根据几个键的值排序数组
      * @param array $array the array to be sorted. The array will be modified after calling this method.
      * @param string|\Closure|array $key the key(s) to be sorted by. This refers to a key name of the sub-array
      * elements, a property name of the objects, or an anonymous function returning the values for comparison
@@ -417,23 +446,28 @@ class BaseArrayHelper
         }
         $n = count($keys);
         if (is_scalar($direction)) {
+            // array_fill — 用给定的值填充数组
+            // 会生成一个值全为 $direction 长度为 $n 的索引数组
             $direction = array_fill(0, $n, $direction);
         } elseif (count($direction) !== $n) {
             throw new InvalidParamException('The length of $direction parameter must be the same as that of $keys.');
         }
         if (is_scalar($sortFlag)) {
+            // 与上面的 $direction 的处理相同
             $sortFlag = array_fill(0, $n, $sortFlag);
         } elseif (count($sortFlag) !== $n) {
             throw new InvalidParamException('The length of $sortFlag parameter must be the same as that of $keys.');
         }
         $args = [];
         foreach ($keys as $i => $key) {
+            // 组建函数 array_multisort 的参数
             $flag = $sortFlag[$i];
             $args[] = static::getColumn($array, $key);
             $args[] = $direction[$i];
             $args[] = $flag;
         }
         $args[] = &$array;
+        // array_multisort — 对多个数组或多维数组进行排序
         call_user_func_array('array_multisort', $args);
     }
 
@@ -458,6 +492,7 @@ class BaseArrayHelper
         $d = [];
         foreach ($data as $key => $value) {
             if (!$valuesOnly && is_string($key)) {
+                // htmlspecialchars — Convert special characters to HTML entities
                 $key = htmlspecialchars($key, ENT_QUOTES, $charset);
             }
             if (is_string($value)) {
