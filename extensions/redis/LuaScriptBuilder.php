@@ -14,7 +14,8 @@ use yii\db\Expression;
 
 /**
  * LuaScriptBuilder builds lua scripts used for retrieving data from redis.
- *
+ * 使用 List 存储所有的主键
+ * 使用 Hash 存储真正的数据，key 是主键
  * @author Carsten Brandt <mail@cebe.cc>
  * @since 2.0
  */
@@ -32,6 +33,9 @@ class LuaScriptBuilder extends \yii\base\Object
         $modelClass = $query->modelClass;
         $key = $this->quoteValue($modelClass::keyPrefix() . ':a:');
 
+        // lua 中 .. 表示连接字符串
+        // HGETALL -- 返回 key 指定的哈希集中所有的字段和值。返回值中，每个字段名的下一个是它的值，所以返回值的长度是哈希集大小的两倍
+        // n 自加 1，pks 数组获得当前 key（主键） 的值，返回所有值即 pks 数组
         return $this->build($query, "n=n+1 pks[n]=redis.call('HGETALL',$key .. pk)", 'pks');
     }
 
@@ -47,6 +51,7 @@ class LuaScriptBuilder extends \yii\base\Object
         $modelClass = $query->modelClass;
         $key = $this->quoteValue($modelClass::keyPrefix() . ':a:');
 
+        // 取到第一个直接 return，否则最终返回 pks，是一个空数组
         return $this->build($query, "do return redis.call('HGETALL',$key .. pk) end", 'pks');
     }
 
@@ -63,6 +68,8 @@ class LuaScriptBuilder extends \yii\base\Object
         $modelClass = $query->modelClass;
         $key = $this->quoteValue($modelClass::keyPrefix() . ':a:');
 
+        // 返回哈希表 key 中给定域 field 的值
+        // n 自加 1，pks 数组获得当前 key（主键） 中 $column 的值（只选出需要的这一列），返回 pks 数组
         return $this->build($query, "n=n+1 pks[n]=redis.call('HGET',$key .. pk," . $this->quoteValue($column) . ")", 'pks');
     }
 
@@ -73,6 +80,7 @@ class LuaScriptBuilder extends \yii\base\Object
      */
     public function buildCount($query)
     {
+        // n 自加 1，去计数，返回总数 n
         return $this->build($query, 'n=n+1', 'n');
     }
 
@@ -88,6 +96,7 @@ class LuaScriptBuilder extends \yii\base\Object
         $modelClass = $query->modelClass;
         $key = $this->quoteValue($modelClass::keyPrefix() . ':a:');
 
+        // n 用来计算和，n 加上 key（主键） 中 $column 的值（只选出需要的这一列），返回总和 n
         return $this->build($query, "n=n+redis.call('HGET',$key .. pk," . $this->quoteValue($column) . ")", 'n');
     }
 
@@ -103,6 +112,7 @@ class LuaScriptBuilder extends \yii\base\Object
         $modelClass = $query->modelClass;
         $key = $this->quoteValue($modelClass::keyPrefix() . ':a:');
 
+        // 求平均值，n 用来记总数，v 用来记和，最后放回 v/n
         return $this->build($query, "n=n+1 if v==nil then v=0 end v=v+redis.call('HGET',$key .. pk," . $this->quoteValue($column) . ")", 'v/n');
     }
 
@@ -118,6 +128,7 @@ class LuaScriptBuilder extends \yii\base\Object
         $modelClass = $query->modelClass;
         $key = $this->quoteValue($modelClass::keyPrefix() . ':a:');
 
+        // 求最小值，n 用来记当前值，v 用来记最小值，最后放回 v
         return $this->build($query, "n=redis.call('HGET',$key .. pk," . $this->quoteValue($column) . ") if v==nil or n<v then v=n end", 'v');
     }
 
@@ -133,13 +144,14 @@ class LuaScriptBuilder extends \yii\base\Object
         $modelClass = $query->modelClass;
         $key = $this->quoteValue($modelClass::keyPrefix() . ':a:');
 
+        // 求最大值，n 用来记当前值，v 用来记最大值，最后放回 v
         return $this->build($query, "n=redis.call('HGET',$key .. pk," . $this->quoteValue($column) . ") if v==nil or n>v then v=n end", 'v');
     }
 
     /**
-     * @param ActiveQuery $query the query used to build the script
-     * @param string $buildResult the lua script for building the result
-     * @param string $return the lua variable that should be returned
+     * @param ActiveQuery $query the query used to build the script 查询条件
+     * @param string $buildResult the lua script for building the result 构建数据的 lua 脚本
+     * @param string $return the lua variable that should be returned 最终返回值在 lua 脚本中的变量名
      * @throws NotSupportedException when query contains unsupported order by condition
      * @return string
      */
@@ -156,6 +168,7 @@ class LuaScriptBuilder extends \yii\base\Object
             $condition = 'true';
         }
 
+        // 根据顺序位置设置在 lua 中使用的 $limitCondition，例子： 'i>1 and i<=10'
         $start = $query->offset === null ? 0 : $query->offset;
         $limitCondition = 'i>' . $start . ($query->limit === null ? '' : ' and i<=' . ($start + $query->limit));
 
@@ -164,6 +177,8 @@ class LuaScriptBuilder extends \yii\base\Object
         $key = $this->quoteValue($modelClass::keyPrefix());
         $loadColumnValues = '';
         foreach ($columns as $column => $alias) {
+            // HGET -- 返回 key 指定的哈希集中该字段所关联的值
+            // 拿出所有的 ActiveRecord 的属性，以便在之后的 condition 中使用
             $loadColumnValues .= "local $alias=redis.call('HGET',$key .. ':a:' .. pk, '$column')\n";
         }
 
@@ -198,8 +213,10 @@ EOF;
         if (isset($columns[$column])) {
             return $columns[$column];
         }
+        // 创建 $column 的别名
         $name = 'c' . preg_replace("/[^A-z]+/", "", $column) . count($columns);
 
+        // 返回生成的别名
         return $columns[$column] = $name;
     }
 
@@ -215,6 +232,8 @@ EOF;
             return $str;
         }
 
+        // addcslashes — 以 C 语言风格使用反斜线转义字符串中的字符
+        // 返回字符串，该字符串在属于参数 charlist 列表中的字符前都加上了反斜线。
         return "'" . addcslashes(str_replace("'", "\\'", $str), "\000\n\r\\\032") . "'";
     }
 
@@ -247,11 +266,14 @@ EOF;
             throw new NotSupportedException('Where condition must be an array in redis ActiveRecord.');
         }
         if (isset($condition[0])) { // operator format: operator, operand 1, operand 2, ...
+            // 存在 $condition[0]，意味着 $condition 是 ['not in', 'a', [1, 2, 3]] 或者 ['or', $condition1, $condition2] 的格式
             $operator = strtolower($condition[0]);
             if (isset($builders[$operator])) {
                 $method = $builders[$operator];
+                // 去掉开头的值
                 array_shift($condition);
 
+                // 调用相应的 build 方法
                 return $this->$method($operator, $condition, $columns);
             } else {
                 throw new Exception('Found unknown operator in query: ' . $operator);
@@ -267,14 +289,19 @@ EOF;
         $parts = [];
         foreach ($condition as $column => $value) {
             if (is_array($value)) { // IN condition
+                // 如果是 ['a' => [1, 2, 3]] 的格式，表示是一个 in 的条件，要使用 buildInCondition
                 $parts[] = $this->buildInCondition('in', [$column, $value], $columns);
             } else {
+                // 将 bool 值转化为 int
                 if (is_bool($value)) {
                     $value = (int) $value;
                 }
                 if ($value === null) {
+                    // 查看哈希表 key 中，给定域 field 是否存在，不存在返回 0
+                    // 将查看属性值是否不存在作为条件，不存在为true
                     $parts[] = "redis.call('HEXISTS',key .. ':a:' .. pk, ".$this->quoteValue($column).")==0";
                 } elseif ($value instanceof Expression) {
+                    // Expression 可以避免掉 quoteValue 的处理
                     $column = $this->addColumn($column, $columns);
                     $parts[] = "$column==" . $value->expression;
                 } else {
@@ -285,20 +312,24 @@ EOF;
             }
         }
 
+        // 如果条件不只一个， 和成一个字符串返回，例如：(ca1==1) and (cb1=2) and (caa2==3)
         return count($parts) === 1 ? $parts[0] : '(' . implode(') and (', $parts) . ')';
     }
 
     private function buildNotCondition($operator, $operands, &$params)
     {
+        // $Operator 是 not, $operands 是 ['a', 1], 表示 a!=1
         if (count($operands) != 1) {
             throw new InvalidParamException("Operator '$operator' requires exactly one operand.");
         }
 
         $operand = reset($operands);
         if (is_array($operand)) {
+            // 正常构建 condition
             $operand = $this->buildCondition($operand, $params);
         }
 
+        // 然后用!()包起来
         return "!($operand)";
     }
 

@@ -73,6 +73,7 @@ use yii\base\InvalidParamException;
 class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Countable
 {
     /**
+     * flash message 数据存储在 session 中的变量名
      * @var string the name of the session variable that stores the flash message data.
      */
     public $flashParam = '__flash';
@@ -83,6 +84,7 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
 
     /**
      * @var array parameter-value pairs to override default session cookie parameters that are used for session_set_cookie_params() function
+     * 这里的值会覆盖 session cookie parameters 中的值
      * Array may have the following possible keys: 'lifetime', 'path', 'domain', 'secure', 'httponly'
      * @see http://www.php.net/manual/en/function.session-set-cookie-params.php
      */
@@ -96,11 +98,15 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
     public function init()
     {
         parent::init();
+        // register_shutdown_function — Register a function for execution on shutdown
         register_shutdown_function([$this, 'close']);
     }
 
     /**
      * Returns a value indicating whether to use custom session storage.
+     * 标记是否使用自定义的 Storage
+     * 如果要使用自定义的 Storage，需重写该方法，并返回 true，然后重写 [[openSession()]], [[closeSession()]],
+     * [[readSession()]], [[writeSession()]], [[destroySession()]] 和 [[gcSession()]] 方法
      * This method should be overridden to return true by child classes that implement custom session storage.
      * To implement custom session storage, override these methods: [[openSession()]], [[closeSession()]],
      * [[readSession()]], [[writeSession()]], [[destroySession()]] and [[gcSession()]].
@@ -120,10 +126,12 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
             return;
         }
 
+        // 设置 session 处理的方法
         $this->registerSessionHandler();
 
         $this->setCookieParamsInternal();
 
+        // session_start — 启动新会话或者重用现有会话
         @session_start();
 
         if ($this->getIsActive()) {
@@ -149,8 +157,12 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
             if (!$this->handler instanceof \SessionHandlerInterface) {
                 throw new InvalidConfigException('"' . get_class($this) . '::handler" must implement the SessionHandlerInterface.');
             }
+            // session_set_save_handler — 设置用户自定义会话存储函数
+            // bool session_set_save_handler ( SessionHandlerInterface $sessionhandler [, bool $register_shutdown = true ] )
+            // $this->handler 需要是 SessionHandlerInterface 的实现，其实也就是要实现 close destroy gc open read write 等方法
             @session_set_save_handler($this->handler, false);
         } elseif ($this->getUseCustomStorage()) {
+            // 这种用法只是说把 SessionHandlerInterface 中需实现的方法，直接传入
             @session_set_save_handler(
                 [$this, 'openSession'],
                 [$this, 'closeSession'],
@@ -188,6 +200,10 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
      */
     public function getIsActive()
     {
+        // session_status — 返回当前会话状态
+        // PHP_SESSION_DISABLED 会话是被禁用的。
+        // PHP_SESSION_NONE 会话是启用的，但不存在当前会话。
+        // PHP_SESSION_ACTIVE 会话是启用的，而且存在当前会话。
         return session_status() == PHP_SESSION_ACTIVE;
     }
 
@@ -313,6 +329,14 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
      */
     public function getCookieParams()
     {
+        // session_get_cookie_params — 获取会话 cookie 参数
+        // 返回一个包含当前会话 cookie 信息的数组：
+        // "lifetime" - cookie 的生命周期，以秒为单位。
+        // "path" - cookie 的访问路径。
+        // "domain" - cookie 的域。
+        // "secure" - 仅在使用安全连接时发送 cookie。
+        // "httponly" - 只能通过 http 协议访问 cookie
+        // array_change_key_case — 返回字符串键名全为小写或大写的数组，默认变为小写
         return array_merge(session_get_cookie_params(), array_change_key_case($this->_cookieParams));
     }
 
@@ -340,6 +364,7 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
         $data = $this->getCookieParams();
         extract($data);
         if (isset($lifetime, $path, $domain, $secure, $httponly)) {
+            // session_set_cookie_params — 设置会话 cookie 参数
             session_set_cookie_params($lifetime, $path, $domain, $secure, $httponly);
         } else {
             throw new InvalidParamException('Please make sure cookieParams contains these elements: lifetime, path, domain, secure and httponly.');
@@ -678,7 +703,7 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
      *
      * With the above code you can use the [bootstrap alert][] classes such as `success`, `info`, `danger`
      * as the flash message key to influence the color of the div.
-     * 
+     *
      * Note that if you use [[addFlash()]], `$message` will be an array, and you will have to adjust the above code.
      *
      * [bootstrap alert]: http://getbootstrap.com/components/#alerts

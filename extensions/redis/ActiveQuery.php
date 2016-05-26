@@ -115,12 +115,14 @@ class ActiveQuery extends Component implements ActiveQueryInterface
     public function all($db = null)
     {
         // TODO add support for orderBy
+        // 取出来的数据，奇数是 key，偶数是 value
         $data = $this->executeScript($db, 'All');
         $rows = [];
         foreach ($data as $dataRow) {
             $row = [];
             $c = count($dataRow);
             for ($i = 0; $i < $c;) {
+                // 格式化数据，生成键值对
                 $row[$dataRow[$i++]] = $dataRow[$i++];
             }
 

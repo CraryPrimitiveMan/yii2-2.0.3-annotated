@@ -54,6 +54,7 @@ class Connection extends Component
     public $port = 6379;
     /**
      * @var string the unix socket path (e.g. `/var/run/redis/redis.sock`) to use for connecting to the redis server.
+     * Unix socket 的地址
      * This can be used instead of [[hostname]] and [[port]] to connect to the server using a unix socket.
      * If a unix socket path is specified, [[hostname]] and [[port]] will be ignored.
      * @since 2.0.1
@@ -78,6 +79,7 @@ class Connection extends Component
     public $dataTimeout = null;
     /**
      * @var array List of available redis commands http://redis.io/commands
+     * Redis 的命令
      */
     public $redisCommands = [
         'BRPOP', // key [key ...] timeout Remove and get the last element in a list, or block until one is available
@@ -223,6 +225,7 @@ class Connection extends Component
 
     /**
      * @var resource redis socket connection
+     * Redis socket 的连接实例
      */
     private $_socket;
 
@@ -233,8 +236,11 @@ class Connection extends Component
      */
     public function __sleep()
     {
+        // 在 serialize 时，关闭连接
         $this->close();
 
+        // get_object_vars — Gets the properties of the given object
+        // get_object_vars获取了所有的属性，因为是在自身的方法里，所以 private 的属性也能拿到
         return array_keys(get_object_vars($this));
     }
 
@@ -244,6 +250,7 @@ class Connection extends Component
      */
     public function getIsActive()
     {
+        // $this->_socket 为 null 则表示未连接
         return $this->_socket !== null;
     }
 
@@ -257,16 +264,20 @@ class Connection extends Component
         if ($this->_socket !== null) {
             return;
         }
+        // 在 PHP 中，a?:b 等价于 a?a:b
         $connection = ($this->unixSocket ?: $this->hostname . ':' . $this->port) . ', database=' . $this->database;
         \Yii::trace('Opening redis DB connection: ' . $connection, __METHOD__);
         $this->_socket = @stream_socket_client(
+            // stream_socket_client — Open Internet or Unix domain socket connection
             $this->unixSocket ? 'unix://' . $this->unixSocket : 'tcp://' . $this->hostname . ':' . $this->port,
             $errorNumber,
             $errorDescription,
+            // ini_get — Gets the value of a configuration option
             $this->connectionTimeout ? $this->connectionTimeout : ini_get("default_socket_timeout")
         );
         if ($this->_socket) {
             if ($this->dataTimeout !== null) {
+                // stream_set_timeout — Set timeout period on a stream
                 stream_set_timeout($this->_socket, $timeout = (int) $this->dataTimeout, (int) (($this->dataTimeout - $timeout) * 1000000));
             }
             if ($this->password !== null) {
@@ -290,7 +301,13 @@ class Connection extends Component
         if ($this->_socket !== null) {
             $connection = ($this->unixSocket ?: $this->hostname . ':' . $this->port) . ', database=' . $this->database;
             \Yii::trace('Closing DB connection: ' . $connection, __METHOD__);
+            // 执行 quit 命令
             $this->executeCommand('QUIT');
+            // stream_socket_shutdown — Shutdown a full-duplex connection
+            // One of the following constants:
+            // 1. STREAM_SHUT_RD (disable further receptions) 接收
+            // 2. STREAM_SHUT_WR (disable further transmissions) 传输
+            // 3. STREAM_SHUT_RDWR (disable further receptions and transmissions) 接收和传输
             stream_socket_shutdown($this->_socket, STREAM_SHUT_RDWR);
             $this->_socket = null;
         }
@@ -303,6 +320,7 @@ class Connection extends Component
      */
     protected function initConnection()
     {
+        // 触发 afterOpen 事件
         $this->trigger(self::EVENT_AFTER_OPEN);
     }
 
@@ -316,6 +334,7 @@ class Connection extends Component
     }
 
     /**
+     * Redis 支持执行 Lua 命令，这里是 Yii 对其的封装
      * @return LuaScriptBuilder
      */
     public function getLuaScriptBuilder()
@@ -331,8 +350,10 @@ class Connection extends Component
      */
     public function __call($name, $params)
     {
+        // Inflector::camel2words -- Converts a CamelCase name into space-separated words.  For example, 'PostTag' will be converted to 'post tag'.
         $redisCommand = strtoupper(Inflector::camel2words($name, false));
         if (in_array($redisCommand, $this->redisCommands)) {
+            // 在 redis 的命令中，就执行
             return $this->executeCommand($name, $params);
         } else {
             return parent::__call($name, $params);
@@ -356,6 +377,7 @@ class Connection extends Component
      * - `array` for commands that return "Multi-bulk replies".
      *
      * See [redis protocol description](http://redis.io/topics/protocol)
+     * 中文相关内容：http://www.redis.cn/topics/protocol.html
      * for details on the mentioned reply types.
      * @trows Exception for commands that return [error reply](http://redis.io/topics/protocol#error-reply).
      */
@@ -363,19 +385,30 @@ class Connection extends Component
     {
         $this->open();
 
+        // 将命令 $name 放入 $params 数组中，方便之后使用循环处理
         array_unshift($params, $name);
+        // 一个合法格式的例子如下：
+        // "*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$7\r\nmyvalue\r\n"
+        // 等价于在 redis-cli 中的 set mykey myValue
         $command = '*' . count($params) . "\r\n";
         foreach ($params as $arg) {
             $command .= '$' . mb_strlen($arg, '8bit') . "\r\n" . $arg . "\r\n";
         }
 
         \Yii::trace("Executing Redis Command: {$name}", __METHOD__);
+        // 写入到 scoket 中，即去执行命令
         fwrite($this->_socket, $command);
 
+        // 处理返回值
         return $this->parseResponse(implode(' ', $params));
     }
 
     /**
+     * 用单行回复，回复的第一个字节将是“+”
+     * 错误消息，回复的第一个字节将是“-”
+     * 整型数字，回复的第一个字节将是“:”
+     * 批量回复，回复的第一个字节将是“$”
+     * 多个批量回复，回复的第一个字节将是“*”
      * @param string $command
      * @return mixed
      * @throws Exception on error
@@ -385,7 +418,9 @@ class Connection extends Component
         if (($line = fgets($this->_socket)) === false) {
             throw new Exception("Failed to read from socket.\nRedis command was: " . $command);
         }
+        // 获取开头的字符
         $type = $line[0];
+        // 去掉开头的字符和最后的\n\r
         $line = mb_substr($line, 1, -2, '8bit');
         switch ($type) {
             case '+': // Status reply
@@ -418,6 +453,7 @@ class Connection extends Component
                 $count = (int) $line;
                 $data = [];
                 for ($i = 0; $i < $count; $i++) {
+                    // 处理多个批量回复
                     $data[] = $this->parseResponse($command);
                 }
 

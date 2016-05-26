@@ -157,6 +157,7 @@ class Cache extends \yii\caching\Cache
             $this->redis->executeCommand('MSET', $args);
         } else {
             $expire = (int) ($expire * 1000);
+            // 使用事务
             $this->redis->executeCommand('MULTI');
             $this->redis->executeCommand('MSET', $args);
             $index = [];
@@ -165,9 +166,12 @@ class Cache extends \yii\caching\Cache
                 $index[] = $key;
             }
             $result = $this->redis->executeCommand('EXEC');
+            // 返回的第一条代表 MSET 执行的结果，需要去掉
+            // 我们只需要看 PEXPIRE 执行的结果，即可知道这一条执行成功没，key 不存在，肯定执行失败
             array_shift($result);
             foreach ($result as $i => $r) {
                 if ($r != 1) {
+                    // 找出执行失败的
                     $failedKeys[] = $index[$i];
                 }
             }

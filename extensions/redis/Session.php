@@ -91,6 +91,7 @@ class Session extends \yii\web\Session
             throw new InvalidConfigException("Session::redis must be either a Redis connection instance or the application component ID of a Redis connection.");
         }
         if ($this->keyPrefix === null) {
+            // 生成 session 存储到 redis 中时， 键值的前缀
             $this->keyPrefix = substr(md5(Yii::$app->id), 0, 5);
         }
         parent::init();
@@ -149,6 +150,7 @@ class Session extends \yii\web\Session
      */
     protected function calculateKey($id)
     {
+        // 生成唯一的键
         return $this->keyPrefix . md5(json_encode([__CLASS__, $id]));
     }
 }
