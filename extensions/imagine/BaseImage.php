@@ -43,12 +43,14 @@ class BaseImage
     const DRIVER_GMAGICK = 'gmagick';
 
     /**
+     * 三种实现方式，gmagick imagick 和 gd2
      * @var array|string the driver to use. This can be either a single driver name or an array of driver names.
      * If the latter, the first available driver will be used.
      */
     public static $driver = [self::DRIVER_GMAGICK, self::DRIVER_IMAGICK, self::DRIVER_GD2];
 
     /**
+     * 创建出来的　Imagine 实例
      * @var ImagineInterface instance.
      */
     private static $_imagine;
@@ -82,6 +84,7 @@ class BaseImage
      */
     protected static function createImagine()
     {
+        // 判断环境可以是用那种驱动，优先级为 gmagick > imagick > gd2
         foreach ((array) static::$driver as $driver) {
             switch ($driver) {
                 case self::DRIVER_GMAGICK:
@@ -108,6 +111,7 @@ class BaseImage
 
     /**
      * Crops an image.
+     * 剪切图片
      *
      * For example,
      *
@@ -118,10 +122,10 @@ class BaseImage
      * $obj->crop('path\to\image.jpg', 200, 200, $point);
      * ~~~
      *
-     * @param string $filename the image file path or path alias.
-     * @param integer $width the crop width
-     * @param integer $height the crop height
-     * @param array $start the starting point. This must be an array with two elements representing `x` and `y` coordinates.
+     * @param string $filename the image file path or path alias. 要剪切文件的地址或者别名
+     * @param integer $width the crop width 要剪切的宽度
+     * @param integer $height the crop height 要剪切的高度
+     * @param array $start the starting point. This must be an array with two elements representing `x` and `y` coordinates. 剪切的开始节点
      * @return ImageInterface
      * @throws InvalidParamException if the `$start` parameter is invalid
      */
@@ -131,6 +135,7 @@ class BaseImage
             throw new InvalidParamException('$start must be an array of two elements.');
         }
 
+        // Point代表一个点， Box代表一个画布
         return static::getImagine()
             ->open(Yii::getAlias($filename))
             ->copy()
@@ -140,6 +145,7 @@ class BaseImage
     /**
      * Creates a thumbnail image. The function differs from `\Imagine\Image\ImageInterface::thumbnail()` function that
      * it keeps the aspect ratio of the image.
+     * 创建一个缩略图，与 `\Imagine\Image\ImageInterface::thumbnail()` 方法不同的是，他不会改变长宽的比例
      * @param string $filename the image file path or path alias.
      * @param integer $width the width in pixels to create the thumbnail
      * @param integer $height the height in pixels to create the thumbnail
@@ -179,6 +185,7 @@ class BaseImage
 
     /**
      * Adds a watermark to an existing image.
+     * 给一个存在的图片添加水印
      * @param string $filename the image file path or path alias.
      * @param string $watermarkFilename the file path or path alias of the watermark image.
      * @param array $start the starting point. This must be an array with two elements representing `x` and `y` coordinates.
@@ -200,6 +207,7 @@ class BaseImage
 
     /**
      * Draws a text string on an existing image.
+     * 在存在的图片上写文字
      * @param string $filename the image file path or path alias.
      * @param string $text the text to write to the image
      * @param string $fontFile the file path or path alias
@@ -233,6 +241,7 @@ class BaseImage
 
     /**
      * Adds a frame around of the image. Please note that the image size will increase by `$margin` x 2.
+     * 为一个图片的四周添加边，可以设置大小/颜色/透明度
      * @param string $filename the full path to the image file
      * @param integer $margin the frame size to add around the image
      * @param string $color the frame color
