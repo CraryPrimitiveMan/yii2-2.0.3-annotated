@@ -14,6 +14,7 @@ use yii\base\Event;
 
 /**
  * AttributeBehavior automatically assigns a specified value to one or multiple attributes of an ActiveRecord object when certain events happen.
+ * 当特定事件发生时，AttributeBehavior 会自动赋值到 ActiveRecord 对象的一个或多个属性
  *
  * To use AttributeBehavior, configure the [[attributes]] property which should specify the list of attributes
  * that need to be updated and the corresponding events that should trigger the update. For example,
@@ -48,6 +49,7 @@ class AttributeBehavior extends Behavior
 {
     /**
      * @var array list of attributes that are to be automatically filled with the value specified via [[value]].
+     * 需要自动填写的属性
      * The array keys are the ActiveRecord events upon which the attributes are to be updated,
      * and the array values are the corresponding attribute(s) to be updated. You can use a string to represent
      * a single attribute, or an array to represent a list of attributes. For example,
@@ -71,6 +73,8 @@ class AttributeBehavior extends Behavior
      *     // return value will be assigned to the attribute
      * }
      * ```
+     *
+     * 赋值到当前的属性
      */
     public $value;
 
@@ -80,6 +84,7 @@ class AttributeBehavior extends Behavior
      */
     public function events()
     {
+        // array_fill_keys — 使用指定的键和值填充数组
         return array_fill_keys(array_keys($this->attributes), 'evaluateAttributes');
     }
 
